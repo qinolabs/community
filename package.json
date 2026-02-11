@@ -16,5 +16,8 @@
     "lint": "turbo run lint",
     "test": "turbo run test"
   },
-  "prettier": "@qinolabs/prettier-config"
+  "prettier": "@qinolabs/prettier-config",
+  "devDependencies": {
+    "turbo": "^2.8.6"
+  }
 }
