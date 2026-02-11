@@ -1,0 +1,29 @@
+{
+  "name": "@qinolabs/eslint-config",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "exports": {
+    "./base": "./base.js",
+    "./react": "./react.js"
+  },
+  "scripts": {
+    "clean": "git clean -xdf .cache node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@eslint/compat": "^1.4.1",
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^6.0.0",
+    "typescript-eslint": "^8.51.0"
+  },
+  "devDependencies": {
+    "@qinolabs/tsconfig": "workspace:*",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3"
+  }
+}

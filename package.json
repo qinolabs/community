@@ -1,0 +1,20 @@
+{
+  "name": "qinolabs-community",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19 <23",
+    "pnpm": ">=10"
+  },
+  "packageManager": "pnpm@10.25.0",
+  "scripts": {
+    "build": "turbo run build",
+    "check": "turbo run check",
+    "dev": "pnpm -F qino-lab-mcp dev",
+    "format": "turbo run format -- --cache --cache-location .cache/.prettiercache",
+    "format:fix": "turbo run format --continue -- --write --cache --cache-location .cache/.prettiercache",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "prettier": "@qinolabs/prettier-config"
+}

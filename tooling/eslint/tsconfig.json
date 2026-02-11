@@ -1,0 +1,9 @@
+{
+  "extends": "@qinolabs/tsconfig/base.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["."],
+  "exclude": ["node_modules"]
+}
