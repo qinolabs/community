@@ -10,7 +10,7 @@
   "scripts": {
     "build": "turbo run build",
     "check": "turbo run check",
-    "dev": "pnpm -F qino-lab-mcp dev",
+    "dev": "pnpm -F qinolabs-mcp dev",
     "format": "turbo run format -- --cache --cache-location .cache/.prettiercache",
     "format:fix": "turbo run format --continue -- --write --cache --cache-location .cache/.prettiercache",
     "lint": "turbo run lint",

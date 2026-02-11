@@ -20,7 +20,7 @@ pnpm install
 ### Development
 
 ```bash
-pnpm dev          # Start qino-lab-mcp dev server + UI
+pnpm dev          # Start qinolabs-mcp dev server + UI
 pnpm check        # Typecheck + lint
 pnpm test         # Run tests
 pnpm format:fix   # Auto-format code
@@ -31,7 +31,7 @@ pnpm format:fix   # Auto-format code
 ```
 community/
   packages/
-    qino-lab-mcp/       # MCP server + React UI
+    qinolabs-mcp/       # MCP server + React UI
       src/
         server/         # Hono HTTP + MCP server
         ui/             # React SPA (Vite)
@@ -60,7 +60,7 @@ If you need a new component or changes to an existing one, please [open an issue
 
 ## Local Development with ui-core
 
-When testing unreleased ui-core changes against qino-lab-mcp locally, you can use pnpm overrides to link to a local checkout:
+When testing unreleased ui-core changes against qinolabs-mcp locally, you can use pnpm overrides to link to a local checkout:
 
 ```jsonc
 // In community/package.json — add temporarily, do NOT commit

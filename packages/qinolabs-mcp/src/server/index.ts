@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * qino-lab-mcp entry point.
+ * qinolabs-mcp entry point.
  *
  * Supports two modes of operation:
  *
@@ -18,10 +18,10 @@
  *
  * Usage:
  *   # Standalone (distribution)
- *   qino-lab-mcp --workspace-dir /path/to/workspace
+ *   qinolabs-mcp --workspace-dir /path/to/workspace
  *
  *   # Client (development)
- *   qino-lab-mcp --workspace-dir /path/to/workspace --api-url http://localhost:4020
+ *   qinolabs-mcp --workspace-dir /path/to/workspace --api-url http://localhost:4020
  */
 
 import path from "node:path";

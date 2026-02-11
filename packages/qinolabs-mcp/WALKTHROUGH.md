@@ -6,7 +6,7 @@ Manual feature walkthrough for testing the qino-lab browser UI and simulated age
 
 ### 1. Start the dev server
 
-From the `qino-lab-mcp` directory:
+From the `qinolabs-mcp` directory:
 
 ```bash
 pnpm dev

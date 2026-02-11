@@ -1,10 +1,10 @@
 {
-  "name": "qino-lab-mcp",
+  "name": "qinolabs-mcp",
   "version": "0.0.1",
   "private": true,
   "type": "module",
   "bin": {
-    "qino-lab-mcp": "./dist/server/index.js"
+    "qinolabs-mcp": "./dist/server/index.js"
   },
   "scripts": {
     "dev": "concurrently -n server,ui -c blue,green \"tsx watch src/server/index.ts --no-browser\" \"vite dev --open\"",

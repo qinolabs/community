@@ -6,13 +6,13 @@ Open-source tools from the [qino](https://qino.dev) ecosystem.
 
 | Package | Description |
 |---------|-------------|
-| [qino-lab-mcp](./packages/qino-lab-mcp/) | MCP server + UI for working with qino-protocol workspaces |
+| [qinolabs-mcp](./packages/qinolabs-mcp/) | MCP server + UI for working with qino-protocol workspaces |
 
 ## Getting Started
 
 ```bash
 pnpm install
-pnpm dev        # Start qino-lab-mcp (server + UI)
+pnpm dev        # Start qinolabs-mcp (server + UI)
 pnpm check      # Typecheck all packages
 pnpm test       # Run tests
 ```

@@ -1,5 +1,5 @@
 /**
- * Temp-directory fixtures for qino-lab-mcp tests.
+ * Temp-directory fixtures for qinolabs-mcp tests.
  *
  * Helper functions that create protocol-compliant workspace structures
  * in the OS temp directory. Each test group creates its own isolated
