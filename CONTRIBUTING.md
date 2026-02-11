@@ -58,22 +58,61 @@ This project uses [`@qinolabs/ui-core`](https://www.npmjs.com/package/@qinolabs/
 
 If you need a new component or changes to an existing one, please [open an issue](https://github.com/qinolabs/community/issues) describing the need.
 
-## Local Development with ui-core
+## Maintainers
 
-When testing unreleased ui-core changes against qinolabs-mcp locally, you can use pnpm overrides to link to a local checkout:
+### Publishing @qinolabs/ui-core
+
+ui-core lives in the private monorepo and is published to npm via [changesets](https://github.com/changesets/changesets).
+
+```bash
+# 1. After making changes to packages/ui-core/
+pnpm changeset              # describe the change (patch/minor/major)
+
+# 2. When ready to release
+pnpm changeset version      # bumps version + generates CHANGELOG
+pnpm -F @qinolabs/ui-core build
+cd packages/ui-core && pnpm publish --no-git-checks   # requires OTP
+```
+
+Dependabot monitors `@qinolabs/ui-core` weekly and opens PRs in this repo when a new version is published.
+
+### Cross-repo development
+
+To test unreleased ui-core changes against this repo before publishing:
 
 ```jsonc
-// In community/package.json — add temporarily, do NOT commit
+// Temporarily add to community/package.json — do NOT commit
 {
   "pnpm": {
     "overrides": {
-      "@qinolabs/ui-core": "link:../path-to/ui-core"
+      "@qinolabs/ui-core": "link:../qinolabs-repo/packages/ui-core"
     }
   }
 }
 ```
 
-Then run `pnpm install` to pick up the linked version. Remember to remove the override before committing.
+Then `pnpm install` to pick up the linked version. After verifying, remove the override, publish ui-core, and update the dependency normally.
+
+### Handling Dependabot PRs
+
+When Dependabot opens a ui-core version bump PR:
+
+1. Check the CHANGELOG for breaking changes
+2. Verify CI passes (typecheck + tests run automatically)
+3. Merge if green
+
+### Architecture overview
+
+```
+qinolabs-repo (private)              community (public)
+├── packages/ui-core/                ├── packages/qinolabs-mcp/
+│   published to npm ──────────────►│   consumes from npm
+├── .changeset/                      ├── .github/dependabot.yml
+│   version management               │   watches for ui-core updates
+└── packages/ui-apps/ (private)      └── tooling/ (self-contained)
+```
+
+There is no sync between repos. This repo is the single source of truth for qinolabs-mcp. The private monorepo is the source of truth for ui-core.
 
 ## Code Style
 
