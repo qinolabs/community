@@ -59,14 +59,6 @@ function NodeView() {
     ? (node.identity["tags"] as string[])
     : [];
 
-  const modifiedLabel = node?.modified
-    ? new Date(node.modified).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    : null;
-
   // Derive sub-graph tab label — use title or fallback to a generic label
   const subGraphLabel = node?.subGraphTitle ?? "Explorations";
 
@@ -119,7 +111,7 @@ function NodeView() {
     }
   }
 
-  const hasMetadata = status || tags.length > 0 || modifiedLabel;
+  const hasMetadata = status || tags.length > 0;
 
   return (
     <div
@@ -127,7 +119,7 @@ function NodeView() {
       style={dottedBackgroundStyle}
     >
       {/* Header bar with tabs and metadata */}
-      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-stone-300/30 bg-stone-200/90 px-4 py-2 backdrop-blur-xl dark:border-stone-700/30 dark:bg-stone-950/90">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-background/40 px-4 py-2">
         {/* Left side: unified tabs for navigation */}
         <div className="flex items-center">
           <Tabs value={activeView}>
@@ -188,7 +180,6 @@ function NodeView() {
         {/* Right side: metadata */}
         {hasMetadata && (
           <div className="flex items-center gap-3">
-            <StatusBadge status={status} />
             {tags.length > 0 && (
               <div className="flex gap-1">
                 {tags.map((tag) => (
@@ -201,11 +192,7 @@ function NodeView() {
                 ))}
               </div>
             )}
-            {modifiedLabel && (
-              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-600">
-                {modifiedLabel}
-              </span>
-            )}
+            <StatusBadge status={status} />
           </div>
         )}
       </div>

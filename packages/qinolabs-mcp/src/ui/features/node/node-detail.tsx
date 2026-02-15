@@ -249,13 +249,13 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
           <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
             Index
           </h2>
-          <div className="-mx-8 grid grid-cols-2 sm:grid-cols-3 gap-1 px-8">
+          <div className="font-mono grid grid-cols-2 sm:grid-cols-3">
             {contentIndex.map((entry, i) => (
               <button
                 key={entry.filename}
                 type="button"
                 onClick={() => handleIndexClick(entry.filename)}
-                className={`flex items-baseline gap-1.5 rounded-lg border border-neutral-200/40 dark:border-neutral-800/40 bg-neutral-50/30 dark:bg-neutral-900/20 px-2.5 py-1.5 text-left font-mono text-[11px] transition-colors hover:bg-neutral-100/50 dark:hover:bg-neutral-800/30 ${
+                className={`flex items-baseline gap-2 border border-stone-200/30 dark:border-stone-800/20 -mt-px -ml-px px-3 py-2 text-left text-[11px] transition-colors hover:bg-stone-100/30 dark:hover:bg-stone-800/20 ${
                   openFile === entry.filename
                     ? "text-neutral-800 dark:text-neutral-200"
                     : "text-neutral-500 dark:text-neutral-400"
@@ -276,9 +276,16 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
       {/* Story */}
       {node.story && (
         <section ref={storyRef} id="story" className={`px-6 ${dividedSectionClassName}`}>
-          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-            Story
-          </h2>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+              Story
+            </h2>
+            {node.modified && (
+              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-600">
+                {new Date(node.modified).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+              </span>
+            )}
+          </div>
           <MarkdownContent>{node.story}</MarkdownContent>
         </section>
       )}
