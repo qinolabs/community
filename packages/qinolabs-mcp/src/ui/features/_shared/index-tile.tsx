@@ -25,6 +25,8 @@ interface IndexTileProps {
   titleClassName?: string;
   /** Opacity class (e.g., "opacity-50" for dormant) */
   opacityClassName?: string;
+  /** Additional class names on the outer link element */
+  className?: string;
 }
 
 function IndexTile({
@@ -37,6 +39,7 @@ function IndexTile({
   borderClassName = defaultStyle.border,
   titleClassName = "text-stone-700 dark:text-stone-300",
   opacityClassName,
+  className,
 }: IndexTileProps) {
   return (
     <Link
@@ -51,6 +54,7 @@ function IndexTile({
         }),
         borderClassName,
         opacityClassName,
+        className,
       )}
     >
       <div className="flex items-start justify-between gap-2">

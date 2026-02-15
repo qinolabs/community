@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { AppWindowMac, Compass } from "lucide-react";
 
+import { buttonVariants } from "@qinolabs/ui-core/components/button";
 import { Input } from "@qinolabs/ui-core/components/input";
-import { Tabs, TabsList, TabsTab } from "@qinolabs/ui-core/components/tabs";
+import { cn } from "@qinolabs/ui-core/lib/utils";
 
 import type { RecentNode } from "~/server/types";
 import { ROOT_WORKSPACE } from "~/ui/lib/graph-path";
@@ -16,15 +17,15 @@ import {
   dividedSectionClassName,
   sectionDividerClassName,
 } from "~/ui/features/_shared/section-dividers";
-import { getStatusStyle } from "~/ui/features/_shared/status-config";
+import {
+  defaultStyle,
+  getStatusStyle,
+} from "~/ui/features/_shared/status-config";
 import { getWorkspaceTextClass } from "~/ui/features/_shared/type-config";
 import { ActionItemsList } from "~/ui/features/landing/action-items-list";
 import { ArcTile } from "~/ui/features/landing/arc-tile";
 import { landingQueryOptions } from "~/ui/query-options";
 import { useDocumentTitle } from "~/ui/use-document-title";
-
-const viewTabClassName =
-  "h-auto grow-0 px-2.5 py-1 text-xs! flex items-center gap-2";
 
 const COLUMN_MAX = 4;
 
@@ -147,7 +148,7 @@ function WorkspacesSection({
       <div className="mb-3">
         <SectionHeader>Workspaces</SectionHeader>
       </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {protocolWorkspaces.map((ws) => {
           const wsNodes = isSearching
             ? (nodesByWorkspace.get(ws.path) ?? [])
@@ -267,8 +268,6 @@ function RecencySections({
 
 function LandingView() {
   const { data: landing } = useQuery(landingQueryOptions());
-  const navigate = useNavigate();
-
   const [search, setSearch] = useState("");
 
   // Landing page uses base title
@@ -310,75 +309,76 @@ function LandingView() {
       style={dottedBackgroundStyle}
     >
       <div className="mx-auto w-full max-w-5xl px-6 py-8">
-        {/* Search + Navigators + Views */}
-        <div className="mb-8 flex items-center gap-6">
-          <div className="w-64">
-            <Input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search nodes..."
-            />
-          </div>
-          {navigators.length > 0 && (
-            <Tabs value="">
-              <TabsList className="bg-transparent">
-                {navigators.map((nav) => {
-                  const navWorkspace = nav.graphPath ?? ROOT_WORKSPACE;
-                  return (
-                    <TabsTab
-                      key={nav.graphPath ? `${nav.graphPath}/${nav.id}` : nav.id}
-                      value={nav.id}
-                      className={viewTabClassName}
-                      onClick={() => {
-                        void navigate({
-                          to: "/$workspace/node/$nodeId",
-                          params: { workspace: navWorkspace, nodeId: nav.id },
-                        });
-                      }}
-                    >
-                      <Compass className="size-4" />
-                      {nav.title}
-                    </TabsTab>
-                  );
-                })}
-              </TabsList>
-            </Tabs>
-          )}
-          {views.length > 0 && (
-            <Tabs value="">
-              <TabsList className="bg-transparent">
-                {views.map((view) => {
-                  // Extract workspace and sub-path from graphPath
-                  const pathParts = view.graphPath?.split("/") ?? [];
-                  const viewWorkspace = pathParts[0] ?? "";
-                  const viewSubPath = pathParts.slice(1).join("/") || undefined;
-                  return (
-                    <TabsTab
-                      key={
-                        view.graphPath
-                          ? `${view.graphPath}/${view.id}`
-                          : view.id
-                      }
-                      value={view.id}
-                      className={viewTabClassName}
-                      onClick={() => {
-                        void navigate({
-                          to: "/$workspace/graph",
-                          params: { workspace: viewWorkspace },
-                          search: { at: viewSubPath, view: view.id },
-                        });
-                      }}
-                    >
-                      <AppWindowMac className="size-4" />
-                      {view.title}
-                    </TabsTab>
-                  );
-                })}
-              </TabsList>
-            </Tabs>
-          )}
+        {/* Search */}
+        <div className="mb-8 w-64">
+          <Input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search nodes..."
+          />
         </div>
+
+        {/* Navigators + Views as square tiles */}
+        {(navigators.length > 0 || views.length > 0) && (
+          <div className="mb-8 grid grid-cols-4 gap-2 sm:grid-cols-6">
+            {navigators.map((nav) => {
+              const navWorkspace = nav.graphPath ?? ROOT_WORKSPACE;
+              return (
+                <Link
+                  key={nav.graphPath ? `${nav.graphPath}/${nav.id}` : nav.id}
+                  to="/$workspace/node/$nodeId"
+                  params={{ workspace: navWorkspace, nodeId: nav.id }}
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    defaultStyle.border,
+                    "group h-auto! aspect-square flex-col items-center px-2 py-3 whitespace-normal",
+                  )}
+                >
+                  <div className="flex flex-1 items-end">
+                    <Compass className="size-5 text-stone-400 transition-colors group-hover:text-stone-600 dark:text-stone-600 dark:group-hover:text-stone-400" />
+                  </div>
+                  <div className="flex flex-1 items-start pt-2">
+                    <span className="text-center font-mono text-[10px] leading-tight text-stone-500 dark:text-stone-400">
+                      {nav.title}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+            {views.map((view) => {
+              const pathParts = view.graphPath?.split("/") ?? [];
+              const viewWorkspace = pathParts[0] ?? "";
+              const viewSubPath = pathParts.slice(1).join("/") || undefined;
+              return (
+                <Link
+                  key={
+                    view.graphPath
+                      ? `${view.graphPath}/${view.id}`
+                      : view.id
+                  }
+                  to="/$workspace/graph"
+                  params={{ workspace: viewWorkspace }}
+                  search={{ at: viewSubPath, view: view.id }}
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    defaultStyle.border,
+                    "group h-auto! aspect-square flex-col items-center px-2 py-3 whitespace-normal",
+                  )}
+                >
+                  <div className="flex flex-1 items-end">
+                    <AppWindowMac className="size-5 text-stone-400 transition-colors group-hover:text-stone-600 dark:text-stone-600 dark:group-hover:text-stone-400" />
+                  </div>
+                  <div className="flex flex-1 items-start pt-2">
+                    <span className="text-center font-mono text-[10px] leading-tight text-stone-500 dark:text-stone-400">
+                      {view.title}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
         {/* Content sections with full-width separators */}
         <div className={`-mx-6 ${sectionDividerClassName}`}>
