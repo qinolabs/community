@@ -228,7 +228,7 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
                 inset="px-8"
               >
                 {/* -mx-[13px] compensates for card border (1px) + px-3 (12px) so card arrows align with section arrow */}
-                <div className="-mx-[13px] space-y-2">
+                <div className="-mx-[13px] space-y-1">
                   {group.nodes.map((annotation) =>
                     renderAnnotation(
                       annotation,

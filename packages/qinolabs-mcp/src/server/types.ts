@@ -226,8 +226,12 @@ export interface ActionItem {
   graphPath?: string;
   workspaceName?: string;
   annotationFilename?: string;
+  /** Node type (e.g., "navigator", "view") — for rendering type-specific icons. */
+  nodeType?: string;
   /** First non-empty line of annotation body, truncated. */
   preview: string;
+  /** Full annotation body — only populated for date-scoped collections (today's notes). */
+  content?: string;
   /** ISO date from annotation meta or node.json. */
   created?: string;
   /** Epoch ms — file modification time for precise timestamp display. */
@@ -249,6 +253,8 @@ export interface LandingData {
   subGraphs: SubGraphEntry[];
   /** Nodes needing human attention — proposals, tensions, proposed-status nodes. */
   actionItems: ActionItem[];
+  /** Today's annotations across all signal types, scoped to current date. */
+  todayAnnotations: ActionItem[];
 }
 
 // ---------------------------------------------------------------------------

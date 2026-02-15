@@ -4,9 +4,11 @@ import { ActionItemTile } from "./action-item-tile";
 
 interface ActionItemsListProps {
   items: ActionItem[];
+  /** Horizontal padding passed to CollapsibleSection for full-bleed hover. */
+  inset?: string;
 }
 
-function ActionItemsList({ items }: ActionItemsListProps) {
+function ActionItemsList({ items, inset }: ActionItemsListProps) {
   if (items.length === 0) {
     return null;
   }
@@ -17,6 +19,7 @@ function ActionItemsList({ items }: ActionItemsListProps) {
         label="Needs Attention"
         count={items.length}
         defaultOpen
+        inset={inset}
       >
         <div className="space-y-2">
           {items.map((item) => (

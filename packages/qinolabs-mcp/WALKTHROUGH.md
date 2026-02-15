@@ -36,22 +36,22 @@ Expected: `"qino concept space"` and `7`.
 
 ## Part 1: Browser UI Walkthrough
 
-### 1.1 Graph View (landing page)
+### 1.1 Landing Page
 
 **Open** `http://localhost:3020`
 
 **Verify:**
 
-- [ ] Header bar shows **"qino concept space"** as the workspace title
-- [ ] Header shows **"7 nodes"** count
-- [ ] **Journal toggle** button is visible in the header (should be active by default)
+- [ ] Title shows **"qino lab"**
+- [ ] **Navigator/View tiles** appear as square tiles (compass and window icons)
+- [ ] **Search bar** filters nodes across workspaces
+- [ ] **Arcs** section shows active arcs (if any)
+- [ ] **Today's Notes** section shows today's annotations across all signal types (reading, connection, tension, proposal)
+- [ ] **Filter pills** visible — clicking toggles signal types on/off, each pill shows count
+- [ ] **Workspaces** section shows content workspaces with node counts
+- [ ] **Nodes** header appears above recency sections
+- [ ] **Today / This week / This month** collapsible sections show recently modified nodes
 - [ ] **Theme toggle** (sun/moon icon) works — switches between light and dark mode
-- [ ] Graph renders with **7 nodes** arranged by React Flow auto-layout
-- [ ] Nodes display their **title** and **status badge** (all should show "active" with green styling)
-- [ ] **Edges** are visible connecting nodes (should be 10 edges total)
-- [ ] Nodes are **draggable** (click and drag to reposition)
-- [ ] **Zoom** works (scroll wheel or pinch)
-- [ ] **Pan** works (click and drag on empty space)
 
 **Node types to verify:**
 | Node | Type | Expected color |

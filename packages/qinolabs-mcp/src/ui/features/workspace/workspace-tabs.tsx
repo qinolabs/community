@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTab } from "@qinolabs/ui-core/components/tabs";
 
 import { landingQueryOptions } from "~/ui/query-options";
 
-const tabClassName = "h-auto grow-0 px-2.5 py-1 text-xs!";
+const tabClassName = "h-auto sm:h-auto grow-0 px-2.5 py-0.5 text-xs!";
 
 interface WorkspaceTabsProps {
   currentWorkspace: string;
@@ -32,7 +32,7 @@ function WorkspaceTabs({ currentWorkspace }: WorkspaceTabsProps) {
 
   return (
     <Tabs value={currentWorkspace}>
-      <TabsList>
+      <TabsList className="bg-transparent">
         {workspaces.map((ws) => (
           <TabsTab
             key={ws.path}

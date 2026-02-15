@@ -377,6 +377,135 @@ async function collectDeepActionItems(
 }
 
 /**
+ * Collect annotations for a given date across all signal types.
+ *
+ * Same shape as collectActionItems but:
+ * - No signal filter — accepts all AgentSignal types
+ * - Date filter: only annotations whose `created` starts with `datePrefix`
+ * - Still excludes resolved/dismissed
+ */
+async function collectAnnotationsForDate(
+  annotationsDir: string,
+  nodeId: string,
+  nodeTitle: string,
+  datePrefix: string,
+  graphPath?: string,
+  workspaceName?: string,
+  nodeType?: string,
+): Promise<ActionItem[]> {
+  const annotations = await readAnnotationsFromDir(annotationsDir);
+  const items: ActionItem[] = [];
+
+  for (const ann of annotations) {
+    // Date filter — only annotations created on the target date
+    if (!ann.meta.created || !ann.meta.created.startsWith(datePrefix)) continue;
+
+    // Skip resolved/dismissed annotations
+    const annStatus = ann.meta.status ?? "open";
+    if (annStatus === "resolved" || annStatus === "dismissed") continue;
+
+    // Extract first non-empty line as preview, truncated to 120 chars
+    const preview =
+      ann.content
+        .split("\n")
+        .map((l) => l.trim())
+        .find((l) => l.length > 0)
+        ?.slice(0, 120) ?? "";
+
+    // Get file mtime for precise timestamp display
+    let modified: number | undefined;
+    try {
+      const stat = await fs.stat(path.join(annotationsDir, ann.filename));
+      modified = stat.mtimeMs;
+    } catch {
+      // File might not exist if annotation was parsed differently
+    }
+
+    items.push({
+      source: "annotation",
+      signal: ann.meta.signal,
+      nodeId,
+      nodeTitle,
+      nodeType,
+      graphPath,
+      workspaceName,
+      annotationFilename: ann.filename,
+      preview,
+      content: ann.content,
+      created: ann.meta.created || undefined,
+      modified,
+      target: ann.meta.target,
+      status: ann.meta.status,
+    });
+  }
+
+  return items;
+}
+
+/**
+ * Recursively collect today's annotations from a graph and all nested sub-graphs.
+ *
+ * Similar traversal to collectDeepActionItems but:
+ * - Calls collectAnnotationsForDate instead of collectActionItems
+ * - Includes navigator annotations (navigators have readings/connections worth surfacing)
+ * - Skips proposed-status nodes (those aren't date-scoped annotations)
+ */
+async function collectDeepAnnotationsForDate(
+  graphDir: string,
+  graphPath: string,
+  workspaceName: string | undefined,
+  datePrefix: string,
+  maxDepth: number = 8,
+): Promise<ActionItem[]> {
+  if (maxDepth <= 0) return [];
+
+  const graphData = await readJsonFile<GraphData>(
+    path.join(graphDir, "graph.json"),
+  );
+  if (!graphData) return [];
+
+  const nodesDir = graphData.nodesDir ?? "nodes";
+  const nodes = await discoverNodes(graphDir, nodesDir);
+  const items: ActionItem[] = [];
+
+  for (const node of nodes) {
+    if (node.type === "arc") continue;
+
+    const nodeDir = path.join(graphDir, nodesDir, node.dir);
+
+    // Collect annotations from all node types (including navigators —
+    // unlike action items, today's notes should surface readings/connections
+    // from navigators too)
+    const annItems = await collectAnnotationsForDate(
+      path.join(nodeDir, "annotations"),
+      node.id,
+      node.title,
+      datePrefix,
+      graphPath,
+      workspaceName,
+      node.type,
+    );
+    items.push(...annItems);
+
+    // Recurse into sub-graphs
+    const hasSubGraph = await fileExists(path.join(nodeDir, "graph.json"));
+    if (hasSubGraph) {
+      const subGraphPath = `${graphPath}/${nodesDir}/${node.dir}`;
+      const subItems = await collectDeepAnnotationsForDate(
+        nodeDir,
+        subGraphPath,
+        workspaceName,
+        datePrefix,
+        maxDepth - 1,
+      );
+      items.push(...subItems);
+    }
+  }
+
+  return items;
+}
+
+/**
  * Read content files by discovery — lists the content/ directory and reads
  * each file found there. This is what makes the protocol universal.
  */
@@ -1090,6 +1219,31 @@ export async function readLandingData(
     return (b.created ?? "").localeCompare(a.created ?? "");
   });
 
+  // Today's annotations — all signal types, scoped to current date
+  const todayPrefix = new Date().toISOString().slice(0, 10);
+  const todayAnnotations: ActionItem[] = [];
+
+  const rootTodayItems = await collectDeepAnnotationsForDate(
+    workspaceDir, "_root", rootWs?.name, todayPrefix,
+  );
+  todayAnnotations.push(...rootTodayItems);
+
+  for (const ws of workspaces) {
+    if (!ws.path) continue;
+    const wsDir = path.join(workspaceDir, ws.path);
+    const wsItems = await collectDeepAnnotationsForDate(
+      wsDir, ws.path, ws.name, todayPrefix,
+    );
+    todayAnnotations.push(...wsItems);
+  }
+
+  todayAnnotations.sort((a, b) => {
+    if (a.modified != null && b.modified != null) return b.modified - a.modified;
+    if (a.modified != null) return -1;
+    if (b.modified != null) return 1;
+    return (b.created ?? "").localeCompare(a.created ?? "");
+  });
+
   return {
     workspaces,
     arcs,
@@ -1098,6 +1252,7 @@ export async function readLandingData(
     recentNodes,
     subGraphs: [], // Keep for API compatibility, but empty
     actionItems,
+    todayAnnotations,
   };
 }
 

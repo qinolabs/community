@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { cn } from "@qinolabs/ui-core/lib/utils";
 import { Input } from "@qinolabs/ui-core/components/input";
 
 import { dottedBackgroundStyle } from "~/ui/features/_shared/dotted-background";
+import { FilterPill } from "~/ui/features/_shared/filter-pill";
 import { IndexTile } from "~/ui/features/_shared/index-tile";
 import { groupByRecency } from "~/ui/features/_shared/recency";
 import { getStatusStyle } from "~/ui/features/_shared/status-config";
 import { getNodeTypeTextClass } from "~/ui/features/_shared/type-config";
-import { ActionItemsList } from "~/ui/features/landing/action-items-list";
+import { TodayNotes } from "~/ui/features/landing/today-notes";
 import { useWorkspaceData } from "~/ui/features/workspace/workspace-context";
 import { landingQueryOptions } from "~/ui/query-options";
 
@@ -59,8 +59,8 @@ function WorkspaceIndexView() {
   // Group into time sections
   const sections = groupByRecency(sorted);
 
-  // Action items scoped to this workspace
-  const actionItems = landing?.actionItems.filter((item) => {
+  // Today's annotations scoped to this workspace
+  const todayAnnotations = landing?.todayAnnotations.filter((item) => {
     if (!item.graphPath) return false;
     const itemWorkspace = item.graphPath.split("/")[0];
     return itemWorkspace === workspace;
@@ -84,27 +84,15 @@ function WorkspaceIndexView() {
           </div>
           {types.length > 1 && (
             <div className="flex flex-wrap gap-1.5">
-              {types.map((type) => {
-                const isActive = activeType === type;
-                const typeColor = getNodeTypeTextClass(type);
-                return (
-                  <button
-                    key={type}
-                    onClick={() => setActiveType(isActive ? null : type)}
-                    className={cn(
-                      "rounded-full border px-2.5 py-0.5 font-mono text-[10px] transition-colors",
-                      typeColor,
-                      isActive
-                        ? "border-current bg-current"
-                        : "border-stone-300/40 hover:border-current/40",
-                    )}
-                  >
-                    <span className={isActive ? "text-white dark:text-black" : undefined}>
-                      {type}
-                    </span>
-                  </button>
-                );
-              })}
+              {types.map((type) => (
+                <FilterPill
+                  key={type}
+                  label={type}
+                  isActive={activeType === type}
+                  onClick={() => setActiveType(activeType === type ? null : type)}
+                  colorClass={getNodeTypeTextClass(type)}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -115,7 +103,7 @@ function WorkspaceIndexView() {
             {/* Action items inline on mobile */}
             {!isSearching && (
               <div className="lg:hidden">
-                <ActionItemsList items={actionItems} />
+                <TodayNotes items={todayAnnotations} />
               </div>
             )}
 
@@ -166,7 +154,7 @@ function WorkspaceIndexView() {
           {!isSearching && (
             <aside className="hidden lg:block lg:w-72 lg:shrink-0">
               <div className="sticky top-8">
-                <ActionItemsList items={actionItems} />
+                <TodayNotes items={todayAnnotations} />
               </div>
             </aside>
           )}

@@ -22,7 +22,7 @@ import {
   getStatusStyle,
 } from "~/ui/features/_shared/status-config";
 import { getWorkspaceTextClass } from "~/ui/features/_shared/type-config";
-import { ActionItemsList } from "~/ui/features/landing/action-items-list";
+import { TodayNotes } from "~/ui/features/landing/today-notes";
 import { ArcTile } from "~/ui/features/landing/arc-tile";
 import { landingQueryOptions } from "~/ui/query-options";
 import { useDocumentTitle } from "~/ui/use-document-title";
@@ -275,7 +275,7 @@ function LandingView() {
 
   if (!landing) return null;
 
-  const { arcs, workspaces, navigators, views, recentNodes, actionItems } =
+  const { arcs, workspaces, navigators, views, recentNodes, todayAnnotations } =
     landing;
 
   // Only show content workspaces (have graph.json, not container workspaces)
@@ -309,15 +309,10 @@ function LandingView() {
       style={dottedBackgroundStyle}
     >
       <div className="mx-auto w-full max-w-5xl px-6 py-8">
-        {/* Search */}
-        <div className="mb-8 w-64">
-          <Input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search nodes..."
-          />
-        </div>
+        {/* Title */}
+        <h1 className="mb-8 font-mono text-sm text-stone-500 dark:text-stone-400">
+          qino lab
+        </h1>
 
         {/* Navigators + Views as square tiles */}
         {(navigators.length > 0 || views.length > 0) && (
@@ -380,6 +375,16 @@ function LandingView() {
           </div>
         )}
 
+        {/* Search */}
+        <div className="mb-8 w-64">
+          <Input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search nodes..."
+          />
+        </div>
+
         {/* Content sections with full-width separators */}
         <div className={`-mx-6 ${sectionDividerClassName}`}>
           {/* Arcs */}
@@ -396,6 +401,13 @@ function LandingView() {
             </section>
           )}
 
+          {/* Today's notes — full-width on mobile, sidebar on desktop */}
+          {!isSearching && todayAnnotations.length > 0 && (
+            <div className={`lg:hidden ${dividedSectionClassName}`}>
+              <TodayNotes items={todayAnnotations} inset="px-6" />
+            </div>
+          )}
+
           {/* Main content + action items sidebar */}
           <div className={`px-6 ${dividedSectionClassName} lg:flex lg:gap-8`}>
             <div className={`min-w-0 flex-1 ${sectionDividerClassName}`}>
@@ -406,14 +418,11 @@ function LandingView() {
                   nodesByWorkspace={nodesByWorkspace}
                 />
               </div>
-              {/* Action items inline on mobile */}
-              {!isSearching && (
-                <div className={`lg:hidden ${dividedSectionClassName}`}>
-                  <ActionItemsList items={actionItems} />
-                </div>
-              )}
               {!isSearching && (
                 <div className={dividedSectionClassName}>
+                  <div className="mb-3">
+                    <SectionHeader>Nodes</SectionHeader>
+                  </div>
                   <RecencySections
                     recencySections={recencySections}
                     workspaces={workspaces}
@@ -421,11 +430,11 @@ function LandingView() {
                 </div>
               )}
             </div>
-            {/* Action items sidebar on desktop */}
-            {!isSearching && (
+            {/* Today's notes sidebar on desktop */}
+            {!isSearching && todayAnnotations.length > 0 && (
               <aside className="hidden lg:block lg:w-72 lg:shrink-0">
                 <div className="sticky top-8">
-                  <ActionItemsList items={actionItems} />
+                  <TodayNotes items={todayAnnotations} />
                 </div>
               </aside>
             )}
