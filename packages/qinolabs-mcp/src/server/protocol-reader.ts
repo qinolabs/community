@@ -1196,7 +1196,7 @@ export async function writeAnnotation(
   const mdFiles = existingFiles.filter((f) => f.endsWith(".md")).sort();
   const nextNum = String(mdFiles.length + 1).padStart(3, "0");
 
-  const now = new Date().toISOString().slice(0, 10);
+  const now = new Date().toISOString();
 
   const slug = body
     .slice(0, 40)

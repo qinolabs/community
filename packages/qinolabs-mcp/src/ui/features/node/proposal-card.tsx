@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { Annotation, AnnotationStatus, JsonRecord } from "~/server/types";
+import { formatAnnotationDate } from "~/ui/features/_shared/format-date";
 import { MarkdownContent } from "~/ui/features/_shared/markdown-content";
 import { StructuredConfig } from "~/ui/features/_shared/structured-config";
 
@@ -148,7 +149,7 @@ function ProposalCard({
           </span>
         )}
         <span className="ml-auto shrink-0 text-[10px] text-neutral-400 dark:text-neutral-600">
-          {annotation.meta.created}
+          {formatAnnotationDate(annotation.meta.created)}
         </span>
       </button>
 

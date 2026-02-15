@@ -3,6 +3,11 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import type { Annotation, AnnotationStatus, ContentFile, NodeDetail } from "~/server/types";
 import { resolveAnnotation as resolveAnnotationApi } from "~/ui/api-client";
+import { CollapsibleSection } from "~/ui/features/_shared/collapsible-section";
+import {
+  dividedSectionClassName,
+  sectionDividerClassName,
+} from "~/ui/features/_shared/section-dividers";
 import { MarkdownContent } from "~/ui/features/_shared/markdown-content";
 import { groupByRecency } from "~/ui/features/_shared/recency";
 import {
@@ -143,9 +148,6 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
   // Optimistic status overrides for annotations
   const [statusOverrides, setStatusOverrides] = useState<Map<string, AnnotationStatus>>(new Map());
 
-  // Track which recency groups are open (only "today" expanded by default)
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["today"]));
-
   function handleResolve(filename: string, status: "accepted" | "resolved" | "dismissed") {
     // Optimistic update
     setStatusOverrides((prev) => new Map(prev).set(filename, status));
@@ -208,67 +210,46 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 p-6">
+    <div className="mx-auto max-w-3xl p-6">
+      <div className={`-mx-6 ${sectionDividerClassName}`}>
       {/* Agent notes — annotations grouped by recency */}
       {agentSections.length > 0 && (
-        <section>
+        <section className={`px-6 ${dividedSectionClassName}`}>
           <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
             Agent Notes
           </h2>
           <div className="-mx-8">
-            {agentSections.map((group) => {
-              const isOpen = openGroups.has(group.key);
-              return (
-                <div key={group.key}>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setOpenGroups((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(group.key)) next.delete(group.key);
-                        else next.add(group.key);
-                        return next;
-                      })
-                    }
-                    className="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40"
-                  >
-                    <span
-                      className={`text-[9px] text-neutral-400 dark:text-neutral-600 transition-transform ${isOpen ? "rotate-90" : ""}`}
-                    >
-                      ▶
-                    </span>
-                    <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
-                      {group.label}
-                    </span>
-                    <span className="text-[10px] text-neutral-400 dark:text-neutral-600">
-                      {group.nodes.length}
-                    </span>
-                  </button>
-                  {isOpen && (
-                    <div className="px-4 pb-3 pt-1 space-y-2">
-                      {group.nodes.map((annotation) =>
-                        renderAnnotation(
-                          annotation,
-                          handleResolve,
-                          statusOverrides.get(annotation.filename),
-                        ),
-                      )}
-                    </div>
+            {agentSections.map((group) => (
+              <CollapsibleSection
+                key={group.key}
+                label={group.label}
+                count={group.nodes.length}
+                defaultOpen={group.key === "today"}
+                inset="px-8"
+              >
+                {/* -mx-[13px] compensates for card border (1px) + px-3 (12px) so card arrows align with section arrow */}
+                <div className="-mx-[13px] space-y-2">
+                  {group.nodes.map((annotation) =>
+                    renderAnnotation(
+                      annotation,
+                      handleResolve,
+                      statusOverrides.get(annotation.filename),
+                    ),
                   )}
                 </div>
-              );
-            })}
+              </CollapsibleSection>
+            ))}
           </div>
         </section>
       )}
 
       {/* Index — compact grid for content navigation */}
       {contentIndex.length > 0 && (
-        <section>
+        <section className={`px-6 ${dividedSectionClassName}`}>
           <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
             Index
           </h2>
-          <div className="-mx-8 grid grid-cols-2 sm:grid-cols-3 gap-1 px-4">
+          <div className="-mx-8 grid grid-cols-2 sm:grid-cols-3 gap-1 px-8">
             {contentIndex.map((entry, i) => (
               <button
                 key={entry.filename}
@@ -294,7 +275,7 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
 
       {/* Story */}
       {node.story && (
-        <section ref={storyRef} id="story">
+        <section ref={storyRef} id="story" className={`px-6 ${dividedSectionClassName}`}>
           <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
             Story
           </h2>
@@ -304,7 +285,7 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
 
       {/* Content files — collapsible accordion */}
       {node.contentFiles.length > 0 && (
-        <section ref={contentRef} id="content">
+        <section ref={contentRef} id="content" className={`px-6 ${dividedSectionClassName}`}>
           <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
             Content
           </h2>
@@ -337,7 +318,7 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
           </div>
         </section>
       )}
-
+      </div>
     </div>
   );
 }

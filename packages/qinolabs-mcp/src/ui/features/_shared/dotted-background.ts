@@ -4,6 +4,6 @@
  */
 export const dottedBackgroundStyle: React.CSSProperties = {
   backgroundImage:
-    "radial-gradient(circle, rgb(120 113 108 / 0.15) 1px, transparent 1px)",
+    "radial-gradient(circle, rgb(120 113 108 / 0.07) 1px, transparent 1px)",
   backgroundSize: "20px 20px",
 };

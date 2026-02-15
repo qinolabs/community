@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { Annotation } from "~/server/types";
+import { formatAnnotationDate } from "~/ui/features/_shared/format-date";
 import { MarkdownContent } from "~/ui/features/_shared/markdown-content";
 
 interface ReadingAnnotationProps {
@@ -52,8 +53,8 @@ function ReadingAnnotation({ annotation }: ReadingAnnotationProps) {
             {hasMore && "..."}
           </span>
         )}
-        <span className="ml-auto text-[10px] text-neutral-400 dark:text-neutral-600">
-          {annotation.meta.created}
+        <span className="ml-auto shrink-0 text-[10px] text-neutral-400 dark:text-neutral-600">
+          {formatAnnotationDate(annotation.meta.created)}
         </span>
       </button>
 

@@ -8,9 +8,14 @@ import { Tabs, TabsList, TabsTab } from "@qinolabs/ui-core/components/tabs";
 
 import type { RecentNode } from "~/server/types";
 import { ROOT_WORKSPACE } from "~/ui/lib/graph-path";
+import { CollapsibleSection } from "~/ui/features/_shared/collapsible-section";
 import { dottedBackgroundStyle } from "~/ui/features/_shared/dotted-background";
 import { IndexTile } from "~/ui/features/_shared/index-tile";
 import { groupByRecency } from "~/ui/features/_shared/recency";
+import {
+  dividedSectionClassName,
+  sectionDividerClassName,
+} from "~/ui/features/_shared/section-dividers";
 import { getStatusStyle } from "~/ui/features/_shared/status-config";
 import { getWorkspaceTextClass } from "~/ui/features/_shared/type-config";
 import { ActionItemsList } from "~/ui/features/landing/action-items-list";
@@ -222,16 +227,12 @@ function WorkspacesSection({
 }
 
 function RecencySections({
-  isSearching,
   recencySections,
   workspaces,
 }: {
-  isSearching: boolean;
   recencySections: { key: string; label: string; nodes: RecentNode[] }[];
   workspaces: { path: string; name: string; repoType?: string }[];
 }) {
-  if (isSearching) return null;
-
   if (recencySections.length === 0) {
     return <EmptyHint>no nodes yet</EmptyHint>;
   }
@@ -239,10 +240,12 @@ function RecencySections({
   return (
     <>
       {recencySections.map((section) => (
-        <section key={section.key}>
-          <div className="mb-3 flex items-center justify-between">
-            <SectionHeader>{section.label}</SectionHeader>
-          </div>
+        <CollapsibleSection
+          key={section.key}
+          label={section.label}
+          count={section.nodes.length}
+          defaultOpen={section.key === "today" || section.key === "week"}
+        >
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {section.nodes.map((node) => (
               <RecentNodeTile
@@ -256,7 +259,7 @@ function RecencySections({
               />
             ))}
           </div>
-        </section>
+        </CollapsibleSection>
       ))}
     </>
   );
@@ -306,9 +309,9 @@ function LandingView() {
       className="flex h-full flex-col overflow-y-auto"
       style={dottedBackgroundStyle}
     >
-      <div className="mx-auto w-full max-w-5xl px-6 py-8 space-y-8">
+      <div className="mx-auto w-full max-w-5xl px-6 py-8">
         {/* Search + Navigators + Views */}
-        <div className="flex items-center gap-6">
+        <div className="mb-8 flex items-center gap-6">
           <div className="w-64">
             <Input
               type="text"
@@ -377,48 +380,56 @@ function LandingView() {
           )}
         </div>
 
-        {/* Arcs */}
-        {!isSearching && sortedArcs.length > 0 && (
-          <section>
-            <div className="mb-3">
-              <SectionHeader>Arcs</SectionHeader>
-            </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {sortedArcs.map((arc) => (
-                <ArcTile key={arc.id} arc={arc} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Main content + action items sidebar */}
-        <div className="lg:flex lg:gap-8">
-          <div className="min-w-0 flex-1 space-y-8">
-            <WorkspacesSection
-              protocolWorkspaces={protocolWorkspaces}
-              isSearching={isSearching}
-              nodesByWorkspace={nodesByWorkspace}
-            />
-            {/* Action items inline on mobile */}
-            {!isSearching && (
-              <div className="lg:hidden">
-                <ActionItemsList items={actionItems} />
+        {/* Content sections with full-width separators */}
+        <div className={`-mx-6 ${sectionDividerClassName}`}>
+          {/* Arcs */}
+          {!isSearching && sortedArcs.length > 0 && (
+            <section className={`px-6 ${dividedSectionClassName}`}>
+              <div className="mb-3">
+                <SectionHeader>Arcs</SectionHeader>
               </div>
-            )}
-            <RecencySections
-              isSearching={isSearching}
-              recencySections={recencySections}
-              workspaces={workspaces}
-            />
-          </div>
-          {/* Action items sidebar on desktop */}
-          {!isSearching && (
-            <aside className="hidden lg:block lg:w-72 lg:shrink-0">
-              <div className="sticky top-8">
-                <ActionItemsList items={actionItems} />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {sortedArcs.map((arc) => (
+                  <ArcTile key={arc.id} arc={arc} />
+                ))}
               </div>
-            </aside>
+            </section>
           )}
+
+          {/* Main content + action items sidebar */}
+          <div className={`px-6 ${dividedSectionClassName} lg:flex lg:gap-8`}>
+            <div className={`min-w-0 flex-1 ${sectionDividerClassName}`}>
+              <div className={dividedSectionClassName}>
+                <WorkspacesSection
+                  protocolWorkspaces={protocolWorkspaces}
+                  isSearching={isSearching}
+                  nodesByWorkspace={nodesByWorkspace}
+                />
+              </div>
+              {/* Action items inline on mobile */}
+              {!isSearching && (
+                <div className={`lg:hidden ${dividedSectionClassName}`}>
+                  <ActionItemsList items={actionItems} />
+                </div>
+              )}
+              {!isSearching && (
+                <div className={dividedSectionClassName}>
+                  <RecencySections
+                    recencySections={recencySections}
+                    workspaces={workspaces}
+                  />
+                </div>
+              )}
+            </div>
+            {/* Action items sidebar on desktop */}
+            {!isSearching && (
+              <aside className="hidden lg:block lg:w-72 lg:shrink-0">
+                <div className="sticky top-8">
+                  <ActionItemsList items={actionItems} />
+                </div>
+              </aside>
+            )}
+          </div>
         </div>
       </div>
     </div>

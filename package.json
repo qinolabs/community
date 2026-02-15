@@ -11,6 +11,7 @@
     "build": "turbo run build",
     "check": "turbo run check",
     "dev": "pnpm -F qinolabs-mcp dev",
+    "dev:lab": "WORKSPACE_DIR=/Users/picard/Code/qinolabs pnpm -F qinolabs-mcp dev",
     "format": "turbo run format -- --cache --cache-location .cache/.prettiercache",
     "format:fix": "turbo run format --continue -- --write --cache --cache-location .cache/.prettiercache",
     "lint": "turbo run lint",

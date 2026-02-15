@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { Annotation, AnnotationStatus } from "~/server/types";
+import { formatAnnotationDate } from "~/ui/features/_shared/format-date";
 import { MarkdownContent } from "~/ui/features/_shared/markdown-content";
 
 interface TensionAnnotationProps {
@@ -74,7 +75,7 @@ function TensionAnnotation({ annotation, status, onResolve }: TensionAnnotationP
           </span>
         )}
         <span className="ml-auto shrink-0 text-[10px] text-neutral-400 dark:text-neutral-600">
-          {annotation.meta.created}
+          {formatAnnotationDate(annotation.meta.created)}
         </span>
       </button>
 

@@ -1,4 +1,5 @@
 import type { ActionItem } from "~/server/types";
+import { CollapsibleSection } from "~/ui/features/_shared/collapsible-section";
 import { ActionItemTile } from "./action-item-tile";
 
 interface ActionItemsListProps {
@@ -6,14 +7,17 @@ interface ActionItemsListProps {
 }
 
 function ActionItemsList({ items }: ActionItemsListProps) {
+  if (items.length === 0) {
+    return null;
+  }
+
   return (
     <section>
-      <div className="mb-3">
-        <h2 className="text-[10px] font-mono uppercase tracking-widest text-stone-500 dark:text-stone-500">
-          Needs Attention
-        </h2>
-      </div>
-      {items.length > 0 ? (
+      <CollapsibleSection
+        label="Needs Attention"
+        count={items.length}
+        defaultOpen
+      >
         <div className="space-y-2">
           {items.map((item) => (
             <ActionItemTile
@@ -26,11 +30,7 @@ function ActionItemsList({ items }: ActionItemsListProps) {
             />
           ))}
         </div>
-      ) : (
-        <div className="py-6 text-center font-mono text-[10px] text-stone-400 dark:text-stone-600">
-          nothing flagged
-        </div>
-      )}
+      </CollapsibleSection>
     </section>
   );
 }
