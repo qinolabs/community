@@ -35,7 +35,7 @@ function ReadingAnnotation({ annotation }: ReadingAnnotationProps) {
         >
           {hasMore ? "▶" : "•"}
         </span>
-        <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
+        <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
           reading
         </span>
         {annotation.meta.target && (
@@ -47,7 +47,7 @@ function ReadingAnnotation({ annotation }: ReadingAnnotationProps) {
           </>
         )}
         {!isExpanded && preview && (
-          <span className="truncate text-[11px] text-neutral-500 dark:text-neutral-500">
+          <span className="truncate text-[11px] text-neutral-700 dark:text-neutral-300">
             {preview}
             {hasMore && "..."}
           </span>

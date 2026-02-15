@@ -142,7 +142,7 @@ function ProposalCard({
           </>
         )}
         {!isExpanded && preview && (
-          <span className="truncate text-[11px] text-neutral-500 dark:text-neutral-500">
+          <span className="truncate text-[11px] text-neutral-700 dark:text-neutral-300">
             {preview}
             {hasMore && "..."}
           </span>

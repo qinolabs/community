@@ -1,19 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import type { Annotation, AnnotationStatus, ContentFile, NodeDetail } from "~/server/types";
 import { resolveAnnotation as resolveAnnotationApi } from "~/ui/api-client";
 import { MarkdownContent } from "~/ui/features/_shared/markdown-content";
-import { signalStyles } from "~/ui/features/_shared/signal-config";
+import { groupByRecency } from "~/ui/features/_shared/recency";
 import {
   getStatusLabel,
   getStatusStyle,
 } from "~/ui/features/_shared/status-config";
-import {
-  AnnotationTimeline,
-  renderAnnotation,
-} from "~/ui/features/node/annotation-timeline";
+import { renderAnnotation } from "~/ui/features/node/annotation-timeline";
 import { renderContentFile } from "~/ui/features/node/result-renderers";
 
 interface NodeDetailViewProps {
@@ -147,6 +143,9 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
   // Optimistic status overrides for annotations
   const [statusOverrides, setStatusOverrides] = useState<Map<string, AnnotationStatus>>(new Map());
 
+  // Track which recency groups are open (only "today" expanded by default)
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["today"]));
+
   function handleResolve(filename: string, status: "accepted" | "resolved" | "dismissed") {
     // Optimistic update
     setStatusOverrides((prev) => new Map(prev).set(filename, status));
@@ -183,29 +182,20 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
     }
   }, [section]);
 
-  const { byTarget, general } = groupAnnotationsByTarget(node.annotations);
+  const { byTarget } = groupAnnotationsByTarget(node.annotations);
 
-  // Collect content filenames so we can find orphaned targeted annotations
-  const contentFilenames = new Set(node.contentFiles.map((f) => f.filename));
-
-  // Annotations whose target doesn't match any content filename
-  const orphaned: Annotation[] = [];
-  for (const [target, annotations] of byTarget) {
-    if (!contentFilenames.has(target)) {
-      orphaned.push(...annotations);
-    }
-  }
-
-  const allGeneral = [...general, ...orphaned];
+  // Unified agent timeline: all non-dismissed annotations grouped by recency
+  const agentSections = groupByRecency(
+    node.annotations
+      .filter((a) => {
+        const status = statusOverrides.get(a.filename) ?? a.meta.status ?? "open";
+        return status !== "dismissed";
+      })
+      .map((a) => ({ ...a, modified: new Date(a.meta.created).getTime() }))
+      .sort((a, b) => b.modified - a.modified),
+  );
 
   const contentIndex = buildContentIndex(node.contentFiles);
-
-  // Attention items: proposals and tensions (open + accepted only)
-  const attentionItems = node.annotations.filter((a) => {
-    if (a.meta.signal !== "proposal" && a.meta.signal !== "tension") return false;
-    const status = statusOverrides.get(a.filename) ?? a.meta.status ?? "open";
-    return status === "open" || status === "accepted";
-  });
 
   function handleIndexClick(filename: string) {
     setOpenFile((prev) => (prev === filename ? null : filename));
@@ -217,64 +207,57 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
     });
   }
 
-  /** Extract first line of annotation content for preview, stripping markdown. */
-  function getPreview(content: string): string {
-    const firstLine = content.split("\n").find((line) => line.trim());
-    if (!firstLine) return "";
-    // Strip common markdown: headers, bold, italic, links, code
-    const stripped = firstLine
-      .replace(/^#{1,6}\s+/, "") // headers
-      .replace(/\*\*(.+?)\*\*/g, "$1") // bold
-      .replace(/\*(.+?)\*/g, "$1") // italic
-      .replace(/_(.+?)_/g, "$1") // italic alt
-      .replace(/`(.+?)`/g, "$1") // inline code
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // links
-      .trim();
-    return stripped.length > 80 ? `${stripped.slice(0, 80)}…` : stripped;
-  }
-
   return (
     <div className="mx-auto max-w-3xl space-y-8 p-6">
-      {/* Needs Attention — proposals and tensions */}
-      {attentionItems.length > 0 && (
+      {/* Agent notes — annotations grouped by recency */}
+      {agentSections.length > 0 && (
         <section>
           <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-            Needs Attention
+            Agent Notes
           </h2>
-          <div className="-mx-8 border border-neutral-200/40 dark:border-neutral-800/30 bg-background/70 px-8 py-3">
-            <div className="space-y-1">
-              {attentionItems.map((annotation) => {
-                const style = signalStyles[annotation.meta.signal];
-                const annStatus = statusOverrides.get(annotation.filename) ?? annotation.meta.status ?? "open";
-                const isAccepted = annStatus === "accepted";
-                const isProposal = annotation.meta.signal === "proposal";
-                return (
-                  <Link
-                    key={annotation.filename}
-                    to="."
-                    search={(prev) => prev}
-                    hash={`annotation-${annotation.filename}`}
-                    className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left transition-colors hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40"
+          <div className="-mx-8">
+            {agentSections.map((group) => {
+              const isOpen = openGroups.has(group.key);
+              return (
+                <div key={group.key}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenGroups((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(group.key)) next.delete(group.key);
+                        else next.add(group.key);
+                        return next;
+                      })
+                    }
+                    className="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40"
                   >
                     <span
-                      className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
-                        isAccepted ? "bg-teal-500" : style.color
-                      } ${isProposal && !isAccepted ? "animate-pulse" : ""}`}
-                    />
-                    <span
-                      className={`shrink-0 text-[10px] font-medium ${
-                        isAccepted ? "text-teal-600 dark:text-teal-400" : style.text
-                      }`}
+                      className={`text-[9px] text-neutral-400 dark:text-neutral-600 transition-transform ${isOpen ? "rotate-90" : ""}`}
                     >
-                      {isAccepted ? "accepted" : style.label}
+                      ▶
                     </span>
-                    <span className="truncate text-[11px] text-neutral-600 dark:text-neutral-400">
-                      {getPreview(annotation.content)}
+                    <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
+                      {group.label}
                     </span>
-                  </Link>
-                );
-              })}
-            </div>
+                    <span className="text-[10px] text-neutral-400 dark:text-neutral-600">
+                      {group.nodes.length}
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-3 pt-1 space-y-2">
+                      {group.nodes.map((annotation) =>
+                        renderAnnotation(
+                          annotation,
+                          handleResolve,
+                          statusOverrides.get(annotation.filename),
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
@@ -285,28 +268,26 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
           <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
             Index
           </h2>
-          <div className="-mx-8 border border-neutral-200/40 dark:border-neutral-800/30 bg-background/70 px-8 py-3">
-            <div className="columns-2 sm:columns-3">
-              {contentIndex.map((entry, i) => (
-                <button
-                  key={entry.filename}
-                  type="button"
-                  onClick={() => handleIndexClick(entry.filename)}
-                  className={`flex items-baseline gap-1.5 px-1.5 py-0.5 text-left font-mono text-[11px] transition-colors hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 ${
-                    openFile === entry.filename
-                      ? "text-neutral-800 dark:text-neutral-200"
-                      : "text-neutral-500 dark:text-neutral-400"
-                  }`}
-                >
-                  <span className="shrink-0 text-[10px] text-neutral-400 dark:text-neutral-600">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="line-clamp-1">
-                    {entry.heading ?? entry.label}
-                  </span>
-                </button>
-              ))}
-            </div>
+          <div className="-mx-8 grid grid-cols-2 sm:grid-cols-3 gap-1 px-4">
+            {contentIndex.map((entry, i) => (
+              <button
+                key={entry.filename}
+                type="button"
+                onClick={() => handleIndexClick(entry.filename)}
+                className={`flex items-baseline gap-1.5 rounded-lg border border-neutral-200/40 dark:border-neutral-800/40 bg-neutral-50/30 dark:bg-neutral-900/20 px-2.5 py-1.5 text-left font-mono text-[11px] transition-colors hover:bg-neutral-100/50 dark:hover:bg-neutral-800/30 ${
+                  openFile === entry.filename
+                    ? "text-neutral-800 dark:text-neutral-200"
+                    : "text-neutral-500 dark:text-neutral-400"
+                }`}
+              >
+                <span className="shrink-0 text-[10px] text-neutral-400 dark:text-neutral-600">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="line-clamp-1">
+                  {entry.heading ?? entry.label}
+                </span>
+              </button>
+            ))}
           </div>
         </section>
       )}
@@ -357,23 +338,6 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
         </section>
       )}
 
-      {/* General agent annotations (no target) + orphaned targeted annotations */}
-      {allGeneral.length > 0 && (
-        <>
-          {/* Separator before agent notes */}
-          <div className="h-px bg-neutral-200/60 dark:bg-neutral-800/40" />
-          <section>
-            <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-              Agent Notes
-            </h2>
-            <AnnotationTimeline
-              annotations={allGeneral}
-              onResolve={handleResolve}
-              statusOverrides={statusOverrides}
-            />
-          </section>
-        </>
-      )}
     </div>
   );
 }
