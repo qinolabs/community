@@ -25,17 +25,12 @@ function TodayNotes({ items, inset }: TodayNotesProps) {
     }
   }
 
-  // Default to "reading" if available, otherwise the first signal with items
-  const defaultSignal: AgentSignal | null =
-    (countBySignal["reading"] ?? 0) > 0
-      ? "reading"
-      : ALL_SIGNALS.find((s) => (countBySignal[s] ?? 0) > 0) ?? null;
+  const [activeSignal, setActiveSignal] = useState<AgentSignal | null>(null);
 
-  const [activeSignal, setActiveSignal] = useState<AgentSignal | null>(defaultSignal);
-
-  const filtered = items.filter(
-    (item) => item.signal !== "proposed" && (activeSignal === null || item.signal === activeSignal),
-  );
+  const filtered =
+    activeSignal === null
+      ? []
+      : items.filter((item) => item.signal !== "proposed" && item.signal === activeSignal);
 
   return (
     <section>
@@ -65,26 +60,20 @@ function TodayNotes({ items, inset }: TodayNotesProps) {
       </div>
 
       {/* Annotation cards */}
-      <div className={inset ?? ""}>
-        {filtered.length > 0 ? (
-          <div className="space-y-1">
-            {filtered.map((item) => (
-              <ActionItemTile
-                key={
-                  item.annotationFilename
-                    ? `${item.graphPath ?? ""}/${item.nodeId}/${item.annotationFilename}`
-                    : `${item.graphPath ?? ""}/${item.nodeId}/status`
-                }
-                item={item}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="py-4 text-center font-mono text-[10px] text-stone-400 dark:text-stone-500">
-            no matching notes
-          </div>
-        )}
-      </div>
+      {filtered.length > 0 && (
+        <div className={`space-y-1 ${inset ?? ""}`}>
+          {filtered.map((item) => (
+            <ActionItemTile
+              key={
+                item.annotationFilename
+                  ? `${item.graphPath ?? ""}/${item.nodeId}/${item.annotationFilename}`
+                  : `${item.graphPath ?? ""}/${item.nodeId}/status`
+              }
+              item={item}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
