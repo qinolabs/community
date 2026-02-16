@@ -40,6 +40,27 @@ function getWorkspaceTextClass(repoType: string | undefined): string {
   return workspaceTextVariants({ repoType });
 }
 
+/**
+ * Workspace repoType → subtle page background tint.
+ * Applied to the area surrounding the content card for at-a-glance workspace identity.
+ */
+const workspaceBgVariants = cva("", {
+  variants: {
+    repoType: {
+      concepts: "bg-lime-500/[0.04] dark:bg-lime-950/[0.15]",
+      implementation: "bg-indigo-500/[0.04] dark:bg-indigo-950/[0.15]",
+      research: "bg-cyan-500/[0.04] dark:bg-cyan-950/[0.15]",
+      tool: "bg-violet-500/[0.04] dark:bg-violet-950/[0.15]",
+    },
+  },
+});
+
+/** Safe wrapper accepting loose `string | undefined` from server data. */
+function getWorkspaceBgClass(repoType: string | undefined): string {
+  if (!repoType || !isRepoType(repoType)) return "";
+  return workspaceBgVariants({ repoType });
+}
+
 // ─── Minimap colors ─────────────────────────────────────────
 
 interface MinimapColor {
@@ -130,6 +151,8 @@ function getNodeTypeTextClass(nodeType: string | undefined): string {
 export {
   workspaceTextVariants,
   getWorkspaceTextClass,
+  workspaceBgVariants,
+  getWorkspaceBgClass,
   nodeTypeTextVariants,
   getNodeTypeTextClass,
   getMinimapColor,

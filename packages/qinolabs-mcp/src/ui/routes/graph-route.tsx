@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { AppWindowMac } from "lucide-react";
-import { Tabs, TabsList, TabsTab } from "@qinolabs/ui-core/components/tabs";
+import { Tabs, CompactTab, CompactTabsList } from "~/ui/features/_shared/compact-tabs";
 
 import type { GraphEdge, GraphWithJournal } from "~/server/types";
 import { WorkspaceGraph } from "~/ui/features/graph/workspace-graph";
@@ -38,8 +38,7 @@ function filterGraphByView(
   };
 }
 
-const viewTabClassName =
-  "h-auto grow-0 px-2.5 py-1 text-xs! flex items-center gap-2";
+const viewTabExtraClassName = "gap-2";
 
 function GraphView() {
   const params = useParams({ strict: false }) as { workspace: string };
@@ -97,19 +96,19 @@ function GraphView() {
       {viewNodes.length > 0 && (
         <div className="flex shrink-0 items-center justify-end border-b border-stone-200/60 px-3 py-1.5 dark:border-stone-800/60">
           <Tabs value={activeViewId ?? ""}>
-            <TabsList className="bg-transparent">
+            <CompactTabsList>
               {viewNodes.map((node) => (
-                <TabsTab
+                <CompactTab
                   key={node.id}
                   value={node.id}
-                  className={viewTabClassName}
+                  className={viewTabExtraClassName}
                   onClick={() => handleViewClick(node.id)}
                 >
                   <AppWindowMac className={"size-4"} />
                   {node.title}
-                </TabsTab>
+                </CompactTab>
               ))}
-            </TabsList>
+            </CompactTabsList>
           </Tabs>
         </div>
       )}

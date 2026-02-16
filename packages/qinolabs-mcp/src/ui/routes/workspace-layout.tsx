@@ -14,12 +14,13 @@ import { ThemeToggle } from "@qinolabs/ui-core/components/theme-toggle";
 import { useIsMobile } from "@qinolabs/ui-core/hooks/use-mobile";
 import { cn } from "@qinolabs/ui-core/lib/utils";
 
-import { Breadcrumbs } from "~/ui/features/_shared/breadcrumbs";
+import { Tabs, CompactTab, CompactTabsList } from "~/ui/features/_shared/compact-tabs";
 import { JournalPanel } from "~/ui/features/workspace/journal-panel";
 import { JournalTabs } from "~/ui/features/workspace/journal-tabs";
 import { useJournalState } from "~/ui/features/workspace/use-journal-state";
 import { WorkspaceContext } from "~/ui/features/workspace/workspace-context";
 import { WorkspaceTabs } from "~/ui/features/workspace/workspace-tabs";
+import { getWorkspaceBgClass } from "~/ui/features/_shared/type-config";
 import { computeGraphPath, resolveWorkspace } from "~/ui/lib/graph-path";
 import { configQueryOptions, graphQueryOptions } from "~/ui/query-options";
 import { useDocumentTitle } from "~/ui/use-document-title";
@@ -103,38 +104,44 @@ function WorkspaceLayout() {
 
   return (
     <WorkspaceContext value={{ workspace, subPath, graph, config: config ?? {}, refresh }}>
-      <div className="flex h-full flex-col">
+      <div className={cn("flex h-full flex-col", getWorkspaceBgClass(config?.repoType))}>
         {/* Full-width navbar */}
         <header className="sticky top-0 z-20 w-full shrink-0">
           <div className="flex h-(--header-height) items-center justify-between px-4">
             <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                render={(props) => (
+                  <Link {...props} to="/" title="Home">
+                    <Home className="size-3.5" />
+                  </Link>
+                )}
+              />
               {isWorkspaceIndex ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    render={(props) => (
-                      <Link {...props} to="/" title="Home">
-                        <Home className="size-3.5" />
-                      </Link>
-                    )}
-                  />
-                  <WorkspaceTabs currentWorkspace={workspace} />
-                </>
+                <WorkspaceTabs currentWorkspace={workspace} />
               ) : (
-                <>
-                  <Breadcrumbs
-                    workspace={workspace}
-                    displayName={displayName}
-                    subPath={params.nodeId ? undefined : subPath}
-                    isSubGraph={!!subPath && !params.nodeId}
-                  />
-                  {!params.nodeId && (
-                    <span className="text-[10px] font-mono text-stone-400 dark:text-stone-500">
-                      {graph.nodes.length} nodes
-                    </span>
-                  )}
-                </>
+                <Tabs value={workspace}>
+                  <CompactTabsList>
+                    <CompactTab
+                      value={workspace}
+                      render={(props) => (
+                        <Link
+                          {...props}
+                          to="/$workspace"
+                          params={{ workspace }}
+                        >
+                          {displayName}
+                        </Link>
+                      )}
+                    />
+                  </CompactTabsList>
+                </Tabs>
+              )}
+              {!isWorkspaceIndex && !params.nodeId && (
+                <span className="text-[10px] font-mono text-stone-400 dark:text-stone-500">
+                  {graph.nodes.length} nodes
+                </span>
               )}
             </div>
             <div className="flex items-center gap-8">

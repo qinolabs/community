@@ -2,8 +2,7 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Eye, Workflow } from "lucide-react";
 
-import { Tabs, TabsList, TabsTab } from "@qinolabs/ui-core/components/tabs";
-
+import { Tabs, CompactTab, CompactTabsList } from "~/ui/features/_shared/compact-tabs";
 import { dottedBackgroundStyle } from "~/ui/features/_shared/dotted-background";
 import { WorkspaceGraph } from "~/ui/features/graph/workspace-graph";
 import { NodeDetailView, StatusBadge } from "~/ui/features/node/node-detail";
@@ -15,7 +14,6 @@ import { useDocumentTitle } from "~/ui/use-document-title";
 type NodeViewTab = "details" | "graph" | "view";
 type NavigationTab = "workspace" | "parent";
 
-const tabClassName = "h-auto grow-0 gap-1.5 px-2.5 py-1 text-xs!";
 
 function NodeView() {
   const { nodeId } = useParams({ strict: false }) as { nodeId: string };
@@ -74,22 +72,7 @@ function NodeView() {
   const isInSubGraph = parentItem !== null;
 
   function handleTabClick(tab: NodeViewTab | NavigationTab) {
-    if (tab === "workspace") {
-      if (parentItem?.id) {
-        // When in sub-graph, navigate to parent node (details view)
-        void navigate({
-          to: "/$workspace/node/$nodeId",
-          params: { workspace, nodeId: parentItem.id },
-          search: { at: parentItem.at },
-        });
-      } else {
-        // Navigate to workspace index
-        void navigate({
-          to: "/$workspace",
-          params: { workspace },
-        });
-      }
-    } else if (tab === "parent") {
+    if (tab === "parent") {
       // Navigate to parent node with sub-graph tab active
       if (parentItem?.id) {
         void navigate({
@@ -123,57 +106,49 @@ function NodeView() {
         {/* Left side: unified tabs for navigation */}
         <div className="flex items-center">
           <Tabs value={activeView}>
-            <TabsList className="bg-transparent">
-              {/* First tab: parent node when in sub-graph, workspace index otherwise */}
-              <TabsTab
-                value="workspace"
-                className={tabClassName}
-                onClick={() => handleTabClick("workspace")}
-              >
-                {parentItem?.title ?? config.name ?? workspaceItem?.title ?? "Workspace"}
-              </TabsTab>
+            <CompactTabsList>
               {/* Parent sub-graph tab — shown when viewing a node within a sub-graph */}
               {isInSubGraph && (
-                <TabsTab
+                <CompactTab
                   value="parent"
-                  className={tabClassName}
+                  className="gap-1.5 py-1 text-sm!"
                   onClick={() => handleTabClick("parent")}
                 >
                   <Workflow className="size-3.5" />
                   <span className="max-w-40 truncate">{graph.title}</span>
-                </TabsTab>
+                </CompactTab>
               )}
               {/* Current node overview tab — always shown */}
-              <TabsTab
+              <CompactTab
                 value="details"
-                className={tabClassName}
+                className="py-1 text-sm!"
                 onClick={() => handleTabClick("details")}
               >
                 {nodeTitle}
-              </TabsTab>
+              </CompactTab>
               {/* Current node's sub-graph tab */}
               {node?.hasSubGraph && (
-                <TabsTab
+                <CompactTab
                   value="graph"
-                  className={tabClassName}
+                  className="gap-1.5 py-1 text-sm!"
                   onClick={() => handleTabClick("graph")}
                 >
                   <Workflow className="size-3.5" />
                   <span>{subGraphLabel}</span>
-                </TabsTab>
+                </CompactTab>
               )}
               {/* Current node's view tab */}
               {hasView && (
-                <TabsTab
+                <CompactTab
                   value="view"
-                  className={tabClassName}
+                  className="gap-1.5 py-1 text-sm!"
                   onClick={() => handleTabClick("view")}
                 >
                   <Eye className="size-3.5" />
                   <span>View</span>
-                </TabsTab>
+                </CompactTab>
               )}
-            </TabsList>
+            </CompactTabsList>
           </Tabs>
         </div>
 

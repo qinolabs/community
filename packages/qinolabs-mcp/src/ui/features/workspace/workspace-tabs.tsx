@@ -1,11 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
-import { Tabs, TabsList, TabsTab } from "@qinolabs/ui-core/components/tabs";
-
+import { Tabs, CompactTab, CompactTabsList } from "~/ui/features/_shared/compact-tabs";
 import { landingQueryOptions } from "~/ui/query-options";
-
-const tabClassName = "h-auto sm:h-auto grow-0 px-2.5 py-0.5 text-xs!";
 
 interface WorkspaceTabsProps {
   currentWorkspace: string;
@@ -32,12 +29,11 @@ function WorkspaceTabs({ currentWorkspace }: WorkspaceTabsProps) {
 
   return (
     <Tabs value={currentWorkspace}>
-      <TabsList className="bg-transparent">
+      <CompactTabsList>
         {workspaces.map((ws) => (
-          <TabsTab
+          <CompactTab
             key={ws.path}
             value={ws.path}
-            className={tabClassName}
             onClick={() => {
               if (ws.path !== currentWorkspace) {
                 void navigate({
@@ -48,9 +44,9 @@ function WorkspaceTabs({ currentWorkspace }: WorkspaceTabsProps) {
             }}
           >
             {ws.name}
-          </TabsTab>
+          </CompactTab>
         ))}
-      </TabsList>
+      </CompactTabsList>
     </Tabs>
   );
 }

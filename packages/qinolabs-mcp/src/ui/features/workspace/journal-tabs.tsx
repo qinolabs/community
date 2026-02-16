@@ -1,14 +1,9 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 
-import { Label } from "@qinolabs/ui-core/components/label";
-import { Tabs, TabsList, TabsTab } from "@qinolabs/ui-core/components/tabs";
-import { ThemeToggle } from "@qinolabs/ui-core/components/theme-toggle";
-
+import { Tabs, CompactTab, CompactTabsList } from "~/ui/features/_shared/compact-tabs";
 import type { JournalTab } from "~/ui/features/workspace/use-journal-state";
 import { useJournalState } from "~/ui/features/workspace/use-journal-state";
 import { useWorkspaceData } from "~/ui/features/workspace/workspace-context";
-
-const tabClassName = "h-auto grow-0 px-2.5 py-1 text-xs!";
 
 /**
  * Journal tabs — toggle panel visibility + switch between scoped and workspace journal.
@@ -52,25 +47,23 @@ function JournalTabs() {
   return (
     <div className="flex items-center gap-8">
       <Tabs value={journal ? activeTab : null}>
-        <TabsList>
+        <CompactTabsList>
           {scopedJournal && (
-            <TabsTab
+            <CompactTab
               value="scoped"
-              className={tabClassName}
               onClick={() => handleTabClick("scoped")}
             >
               {/* {scopedJournal.label} */}
               Local notes
-            </TabsTab>
+            </CompactTab>
           )}
-          <TabsTab
+          <CompactTab
             value="workspace"
-            className={tabClassName}
             onClick={() => handleTabClick("workspace")}
           >
             Workspace notes
-          </TabsTab>
-        </TabsList>
+          </CompactTab>
+        </CompactTabsList>
       </Tabs>
     </div>
   );
