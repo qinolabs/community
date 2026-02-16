@@ -110,21 +110,21 @@ function CollapsibleContentFile({
   statusOverrides,
 }: CollapsibleContentFileProps) {
   return (
-    <div className="-mx-8 border border-neutral-200/40 dark:border-neutral-800/30 bg-background/70">
+    <div className="-mx-8 border border-stone-200/40 dark:border-stone-800/30 bg-background/70">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-2 px-4 py-2 text-left font-mono text-[11px] text-neutral-500 dark:text-neutral-400 transition-colors hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40"
+        className="flex w-full items-center gap-2 px-4 py-2 text-left font-mono text-[11px] text-stone-500 dark:text-stone-400 transition-colors hover:bg-stone-100/60 dark:hover:bg-stone-800/40"
       >
         <span
-          className={`text-[9px] text-neutral-400 dark:text-neutral-600 transition-transform ${isOpen ? "rotate-90" : ""}`}
+          className={`text-[9px] text-stone-400 dark:text-stone-600 transition-transform ${isOpen ? "rotate-90" : ""}`}
         >
           ▶
         </span>
         <span className="truncate">{file.filename}</span>
       </button>
       {isOpen && (
-        <div className="border-t border-neutral-200/30 dark:border-neutral-800/20 px-8 pb-3 pt-2 space-y-2">
+        <div className="border-t border-stone-200/30 dark:border-stone-800/20 px-8 pb-3 pt-2 space-y-2">
           {renderContentFile(file)}
           {annotations.map((annotation) =>
             renderAnnotation(annotation, onResolve, statusOverrides?.get(annotation.filename)),

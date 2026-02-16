@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Search } from "lucide-react";
 
-import { Input } from "@qinolabs/ui-core/components/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@qinolabs/ui-core/components/input-group";
 
+import { CollapsibleSection } from "~/ui/features/_shared/collapsible-section";
 import { dottedBackgroundStyle } from "~/ui/features/_shared/dotted-background";
 import { FilterPill } from "~/ui/features/_shared/filter-pill";
 import { IndexTile } from "~/ui/features/_shared/index-tile";
@@ -74,14 +76,17 @@ function WorkspaceIndexView() {
       <div className="mx-auto w-full max-w-5xl px-6 py-8 space-y-6">
         {/* Search + filter pills */}
         <div className="space-y-3">
-          <div className="max-w-sm">
-            <Input
+          <InputGroup className="max-w-sm">
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+            <InputGroupInput
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search nodes..."
             />
-          </div>
+          </InputGroup>
           {types.length > 1 && (
             <div className="flex flex-wrap gap-1.5">
               {types.map((type) => (
@@ -109,38 +114,43 @@ function WorkspaceIndexView() {
 
             {/* Time-grouped node grid */}
             {sections.length > 0 ? (
-              sections.map((section) => (
-                <section key={section.key}>
-                  <h2 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-stone-500 dark:text-stone-500">
-                    {section.label}
-                  </h2>
-                  <div className="grid max-w-3xl grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {section.nodes.map((node) => {
-                      const status = getStatusStyle(node.status);
-                      const nodeTypeColor = getNodeTypeTextClass(node.type);
-                      return (
-                        <IndexTile
-                          key={node.id}
-                          title={node.dir ?? node.id}
-                          subtitle={
-                            node.type ? (
-                              <span className={nodeTypeColor}>{node.type}</span>
-                            ) : undefined
-                          }
-                          to="/$workspace/node/$nodeId"
-                          params={{ workspace, nodeId: node.id }}
-                          search={{}}
-                          borderClassName={status.border}
-                          titleClassName={status.label}
-                          opacityClassName={
-                            node.status === "dormant" ? "opacity-50" : undefined
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                </section>
-              ))
+              <div className="-mx-6">
+                {sections.map((section) => (
+                  <CollapsibleSection
+                    key={section.key}
+                    label={section.label}
+                    count={section.nodes.length}
+                    defaultOpen={section.key === "today" || section.key === "week"}
+                    inset="px-6"
+                  >
+                    <div className="grid max-w-3xl grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {section.nodes.map((node) => {
+                        const status = getStatusStyle(node.status);
+                        const nodeTypeColor = getNodeTypeTextClass(node.type);
+                        return (
+                          <IndexTile
+                            key={node.id}
+                            title={node.dir ?? node.id}
+                            subtitle={
+                              node.type ? (
+                                <span className={nodeTypeColor}>{node.type}</span>
+                              ) : undefined
+                            }
+                            to="/$workspace/node/$nodeId"
+                            params={{ workspace, nodeId: node.id }}
+                            search={{}}
+                            borderClassName={status.border}
+                            titleClassName={status.label}
+                            opacityClassName={
+                              node.status === "dormant" ? "opacity-50" : undefined
+                            }
+                          />
+                        );
+                      })}
+                    </div>
+                  </CollapsibleSection>
+                ))}
+              </div>
             ) : (
               <div className="border-2 border-dashed border-stone-200/40 px-4 py-6 text-center font-mono text-[11px] text-stone-400 dark:border-stone-800/30 dark:text-stone-600">
                 {searchQuery || activeType

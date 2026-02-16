@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { AppWindowMac, Compass } from "lucide-react";
+import { AppWindowMac, Compass, Search } from "lucide-react";
 
 import { buttonVariants } from "@qinolabs/ui-core/components/button";
-import { Input } from "@qinolabs/ui-core/components/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@qinolabs/ui-core/components/input-group";
 import { cn } from "@qinolabs/ui-core/lib/utils";
 
 import type { RecentNode } from "~/server/types";
@@ -239,13 +239,14 @@ function RecencySections({
   }
 
   return (
-    <>
+    <div className="-mx-6">
       {recencySections.map((section) => (
         <CollapsibleSection
           key={section.key}
           label={section.label}
           count={section.nodes.length}
           defaultOpen={section.key === "today" || section.key === "week"}
+          inset="px-6"
         >
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {section.nodes.map((node) => (
@@ -262,7 +263,7 @@ function RecencySections({
           </div>
         </CollapsibleSection>
       ))}
-    </>
+    </div>
   );
 }
 
@@ -376,14 +377,17 @@ function LandingView() {
         )}
 
         {/* Search */}
-        <div className="mb-8 w-64">
-          <Input
+        <InputGroup className="mb-8 w-64">
+          <InputGroupAddon>
+            <Search />
+          </InputGroupAddon>
+          <InputGroupInput
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search nodes..."
           />
-        </div>
+        </InputGroup>
 
         {/* Content sections with full-width separators */}
         <div className={`-mx-6 ${sectionDividerClassName}`}>
