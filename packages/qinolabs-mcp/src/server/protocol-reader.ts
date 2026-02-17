@@ -880,7 +880,7 @@ export async function readAnnotations(
  */
 async function getNodeMtime(nodeDir: string): Promise<number> {
   let latest = 0;
-  for (const filename of ["story.md", "node.json"]) {
+  for (const filename of ["story.md", "node.json", "graph.json", "journal.md"]) {
     try {
       const stat = await fs.stat(path.join(nodeDir, filename));
       if (stat.mtimeMs > latest) latest = stat.mtimeMs;
