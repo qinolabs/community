@@ -4,10 +4,17 @@ import { ThemeProvider } from "@qinolabs/ui-core/components/theme";
 import { Toaster } from "@qinolabs/ui-core/components/sonner";
 
 import { queryClient, router } from "./router";
+import { useWorkspaceEvents } from "./use-workspace-events";
+
+function WorkspaceEventsProvider() {
+  useWorkspaceEvents();
+  return null;
+}
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <WorkspaceEventsProvider />
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
         <RouterProvider router={router} />
       </ThemeProvider>

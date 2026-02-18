@@ -77,6 +77,13 @@ export interface ContentFile {
   content: string;
 }
 
+/** A data file entry from a node's data/ directory (index only — no content). */
+export interface DataFileEntry {
+  filename: string;
+  /** File size in bytes — agents gauge before fetching full content. */
+  size: number;
+}
+
 /**
  * A single item in the navigation breadcrumb trail.
  * Represents an ancestor of the current node (workspace or parent nodes).
@@ -96,6 +103,8 @@ export interface NodeDetail {
   identity: NodeIdentity | null;
   story: string | null;
   contentFiles: ContentFile[];
+  /** Data files discovered in the node's data/ directory (index only — filename + size). */
+  dataFiles: DataFileEntry[];
   annotations: Annotation[];
   hasSubGraph: boolean;
   /**

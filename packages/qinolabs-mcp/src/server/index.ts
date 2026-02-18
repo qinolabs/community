@@ -31,6 +31,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { serve } from "@hono/node-server";
 
 import { createApi } from "./http-api.js";
+import { createFileWatcher, type FileWatcher } from "./file-watcher.js";
 import { registerTools } from "./mcp-tools.js";
 import { createDirectOps, createHttpOps } from "./ops.js";
 import { openBrowser } from "./open-browser.js";
@@ -118,10 +119,15 @@ async function main() {
   // Base URL for deeplinks — constructed from port in standalone mode
   const baseUrl = `http://localhost:${port}`;
 
+  // File watcher — created in standalone mode, shared between HTTP (SSE) and MCP (fast path)
+  let watcher: FileWatcher | undefined;
+
   if (!isClientMode) {
+    watcher = createFileWatcher(workspaceDir);
+
     const serveSpa = await hasBuiltSpa();
     const staticDir = serveSpa ? distUiDir : undefined;
-    const api = createApi(workspaceDir, repoRoot, staticDir, baseUrl, knownWorkspaces);
+    const api = createApi(workspaceDir, repoRoot, staticDir, baseUrl, knownWorkspaces, watcher);
 
     const httpServer = serve(
       { fetch: api.fetch, port },
@@ -138,7 +144,10 @@ async function main() {
 
     // Graceful shutdown when MCP disconnects (if in MCP mode)
     if (isStdio) {
-      process.on("exit", () => httpServer.close());
+      process.on("exit", () => {
+        watcher?.close();
+        httpServer.close();
+      });
     }
   } else {
     log(`[qino-lab] Client mode — using API at ${apiUrl}`);
@@ -159,7 +168,7 @@ async function main() {
     const opsBaseUrl = apiUrl ?? baseUrl;
     const ops = isClientMode
       ? createHttpOps(apiUrl)
-      : createDirectOps(workspaceDir, repoRoot, opsBaseUrl, knownWorkspaces);
+      : createDirectOps(workspaceDir, repoRoot, opsBaseUrl, knownWorkspaces, watcher);
 
     registerTools(mcpServer, ops);
 

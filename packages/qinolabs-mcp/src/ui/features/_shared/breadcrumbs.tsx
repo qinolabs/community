@@ -80,7 +80,7 @@ function Breadcrumbs({ workspace, displayName, subPath, isSubGraph, className }:
       {/* Home icon - links to landing */}
       <Button
         variant="ghost"
-        size="icon-xs"
+        size="icon"
         render={(props) => (
           <Link {...props} to="/" title="Home">
             <Home className="size-3.5" />

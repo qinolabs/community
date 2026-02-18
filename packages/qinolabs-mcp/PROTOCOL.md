@@ -256,6 +256,46 @@ The node's `type` affects visual chrome (colors, icons via `qino-config.json`) b
 
 ---
 
+### data/
+
+Directory of structured JSON files attached to a node. Machine-readable counterpart to `content/` (which is narrative markdown).
+
+```
+nodes/eval-threshold-2026-02-18/
+  node.json
+  story.md
+  content/
+    analysis.md
+  data/
+    schema.json      # Optional — describes the data shape (JSON Schema draft 2020-12)
+    scores.json      # Structured data file
+```
+
+**Convention:**
+
+| File | Role |
+|------|------|
+| `data/schema.json` | Optional. If present, describes the expected shape of data files. Advisory — not enforced on write. |
+| `data/*.json` | Structured data files. File names are descriptive (e.g., `scores.json`, `turns.json`). |
+
+**Relationship to content/:**
+
+- `content/` is narrative (markdown, human-readable)
+- `data/` is structured (JSON, machine-readable)
+- They coexist — a node can have both
+
+**Discovery:**
+
+The protocol reader discovers `data/` files by listing the directory (same pattern as `content/`). However, unlike content files, data files appear in `readNode()` as a **lightweight index** (filename + size in bytes) rather than full content. This prevents large data files from polluting agent context on every node read.
+
+Full data content is accessed via the `read_data` tool (MCP) or `GET /api/nodes/:nodeId/data` (HTTP).
+
+**Journal echo:**
+
+When `data/` is created for the first time on a node (first `write_data` call), an echo is appended to the node's local journal. Subsequent writes to the same node's data directory are silent.
+
+---
+
 ### journal.md
 
 Timestamped entries with context markers. The timeline of attention at a given scope.

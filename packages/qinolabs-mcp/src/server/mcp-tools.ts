@@ -426,6 +426,123 @@ Resolved and dismissed annotations are filtered out of actionItems in read_graph
   );
 
   server.tool(
+    "read_data",
+    `Read structured data files from a node's data/ directory.
+
+WHEN TO USE:
+- After seeing dataFiles in read_node — fetch full content of specific data files
+- Comparing structured data across nodes (scores, results)
+- Loading evaluation data, simulation results, or other structured content
+
+BEHAVIOR:
+- If filename is provided, returns that specific file's content
+- If filename is omitted, returns ALL data files (excluding schema.json which is returned separately)
+- schema.json (if present) is always returned in the schema field
+
+RETURNS: { dataFiles: [{ filename, content }], schema?: string }`,
+    {
+      nodeId: z.string().describe("The node identifier from graph.json"),
+      filename: z
+        .string()
+        .optional()
+        .describe(
+          "Specific data file to read (e.g., 'scores.json'). Omit to read all data files.",
+        ),
+      graphPath: z
+        .string()
+        .optional()
+        .describe(
+          "Relative path from workspace root to the graph containing this node. Omit for root graph.",
+        ),
+    },
+    async ({ nodeId, filename, graphPath }) => {
+      try {
+        const result = await ops.readData({ nodeId, filename, graphPath });
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: message,
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.tool(
+    "write_data",
+    `Write a structured JSON data file to a node's data/ directory.
+
+WHEN TO USE:
+- Storing evaluation results (rubric scores, simulation outputs)
+- Attaching structured data to a protocol node
+- Writing schema.json to describe the data shape
+
+BEHAVIOR:
+- Creates data/ directory if it doesn't exist
+- Validates input is valid JSON (parse check) — does NOT validate against schema.json
+- Echoes to node journal on FIRST write (when data/ directory is created)
+- Subsequent writes to the same node's data/ are silent
+
+RETURNS: { success: true, filename }`,
+    {
+      nodeId: z.string().describe("The node identifier from graph.json"),
+      filename: z
+        .string()
+        .describe(
+          "Data file name (e.g., 'scores.json', 'schema.json'). Must end in .json.",
+        ),
+      data: z
+        .string()
+        .describe(
+          "The JSON string to write. Must be valid JSON.",
+        ),
+      graphPath: z
+        .string()
+        .optional()
+        .describe(
+          "Relative path from workspace root to the graph containing this node. Omit for root graph.",
+        ),
+    },
+    async ({ nodeId, filename, data, graphPath }) => {
+      try {
+        const result = await ops.writeData({ nodeId, filename, data, graphPath });
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: message,
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.tool(
     "update_view",
     `Update a curated view's focal node and included nodes. Syncs view.json and curates edges in graph.json.
 

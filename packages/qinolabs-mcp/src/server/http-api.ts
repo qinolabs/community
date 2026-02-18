@@ -10,7 +10,9 @@ import fs from "node:fs/promises";
 import nodePath from "node:path";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { streamSSE } from "hono/streaming";
 
+import type { FileWatcher } from "./file-watcher.js";
 import {
   readConfig,
   readGraph,
@@ -25,6 +27,8 @@ import {
   createNode,
   writeJournalEntry,
   updateView,
+  readData,
+  writeData,
 } from "./protocol-reader.js";
 
 import type { AgentSignal, JournalSection } from "./types.js";
@@ -52,6 +56,7 @@ export function createApi(
   staticDir?: string,
   baseUrl?: string,
   knownWorkspaces?: ReadonlySet<string>,
+  watcher?: FileWatcher,
 ) {
   const app = new Hono();
 
@@ -67,6 +72,35 @@ export function createApi(
   };
 
   app.use("/api/*", cors());
+
+  // ── SSE events ─────────────────────────────────────────────────
+
+  app.get("/api/events", (c) => {
+    return streamSSE(c, async (stream) => {
+      if (!watcher) {
+        // No watcher (client mode) — keep connection alive without events.
+        // This prevents EventSource from entering aggressive retry.
+        await new Promise<void>((resolve) => {
+          c.req.raw.signal.addEventListener("abort", () => resolve());
+        });
+        return;
+      }
+
+      // Send each file-change event as an SSE message
+      const unsubscribe = watcher.subscribe((event) => {
+        stream.writeSSE({ data: JSON.stringify(event) }).catch(() => {
+          // Write failure means the connection is closing — handled below
+        });
+      });
+
+      // Wait for client disconnect
+      await new Promise<void>((resolve) => {
+        c.req.raw.signal.addEventListener("abort", () => resolve());
+      });
+
+      unsubscribe();
+    });
+  });
 
   // ── Read endpoints ─────────────────────────────────────────────
 
@@ -288,6 +322,76 @@ export function createApi(
 
     const result = await updateView(graphDir, nodeId, body);
     return c.json(result);
+  });
+
+  // ── Data endpoints ───────────────────────────────────────────────
+
+  app.get("/api/nodes/:nodeId/data", async (c) => {
+    const nodeId = c.req.param("nodeId");
+    const graphPath = resolveApiPath(c.req.query("path"));
+    const graphDir = graphPath
+      ? nodePath.join(workspaceDir, graphPath)
+      : workspaceDir;
+
+    try {
+      const result = await readData(graphDir, nodeId);
+      return c.json(result);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (message.includes("not found") || message.includes("Not found")) {
+        return c.json({ error: message }, 404);
+      }
+      throw err;
+    }
+  });
+
+  app.get("/api/nodes/:nodeId/data/:filename", async (c) => {
+    const nodeId = c.req.param("nodeId");
+    const filename = c.req.param("filename");
+    const graphPath = resolveApiPath(c.req.query("path"));
+    const graphDir = graphPath
+      ? nodePath.join(workspaceDir, graphPath)
+      : workspaceDir;
+
+    try {
+      const result = await readData(graphDir, nodeId, filename);
+      return c.json(result);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (message.includes("not found") || message.includes("Not found")) {
+        return c.json({ error: message }, 404);
+      }
+      throw err;
+    }
+  });
+
+  app.put("/api/nodes/:nodeId/data/:filename", async (c) => {
+    const nodeId = c.req.param("nodeId");
+    const filename = c.req.param("filename");
+    const graphPath = resolveApiPath(c.req.query("path"));
+    const graphDir = graphPath
+      ? nodePath.join(workspaceDir, graphPath)
+      : workspaceDir;
+
+    const body = await c.req.json<{ data: string }>();
+
+    if (!body.data) {
+      return c.json({ error: "Missing required field: data" }, 400);
+    }
+
+    try {
+      const result = await writeData(graphDir, nodeId, filename, body.data);
+      return c.json(result, 201);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (message.includes("not found") || message.includes("Not found")) {
+        return c.json({ error: message }, 404);
+      }
+      if (message.includes("Invalid JSON")) {
+        return c.json({ error: message }, 400);
+      }
+      throw err;
+    }
   });
 
   app.post("/api/journal/checkpoint", async (c) => {

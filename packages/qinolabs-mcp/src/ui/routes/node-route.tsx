@@ -104,9 +104,9 @@ function NodeView() {
       {/* Header bar with tabs and metadata */}
       <div className="sticky top-0 z-10 flex items-center justify-between bg-background/85 backdrop-blur-2xl px-4 py-2">
         {/* Left side: unified tabs for navigation */}
-        <div className="flex items-center">
-          <Tabs value={activeView}>
-            <CompactTabsList>
+        <div className="flex min-w-0 items-center">
+          <Tabs value={activeView} className="min-w-0">
+            <CompactTabsList className="min-w-0 w-auto">
               {/* Parent sub-graph tab — shown when viewing a node within a sub-graph */}
               {isInSubGraph && (
                 <CompactTab
@@ -121,10 +121,10 @@ function NodeView() {
               {/* Current node overview tab — always shown */}
               <CompactTab
                 value="details"
-                className="py-1 text-sm!"
+                className="min-w-0 shrink py-1 text-sm!"
                 onClick={() => handleTabClick("details")}
               >
-                {nodeTitle}
+                <span className="truncate">{nodeTitle}</span>
               </CompactTab>
               {/* Current node's sub-graph tab */}
               {node?.hasSubGraph && (

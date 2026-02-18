@@ -5,6 +5,7 @@ import { AppWindowMac, Compass, Search } from "lucide-react";
 
 import { buttonVariants } from "@qinolabs/ui-core/components/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@qinolabs/ui-core/components/input-group";
+import { ThemeToggle } from "@qinolabs/ui-core/components/theme-toggle";
 import { cn } from "@qinolabs/ui-core/lib/utils";
 
 import type { RecentNode } from "~/server/types";
@@ -311,9 +312,12 @@ function LandingView() {
     >
       <div className="mx-auto w-full max-w-5xl px-6 py-8">
         {/* Title */}
-        <h1 className="mb-8 font-mono text-sm text-stone-500 dark:text-stone-400">
-          qino lab
-        </h1>
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="font-mono text-sm text-stone-500 dark:text-stone-400">
+            qino lab
+          </h1>
+          <ThemeToggle />
+        </div>
 
         {/* Navigators + Views as square tiles */}
         {(navigators.length > 0 || views.length > 0) && (

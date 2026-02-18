@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import type { Annotation, AnnotationStatus, ContentFile, NodeDetail } from "~/server/types";
-import { resolveAnnotation as resolveAnnotationApi } from "~/ui/api-client";
+import type { Annotation, AnnotationStatus, ContentFile, DataFileEntry, JsonValue, NodeDetail } from "~/server/types";
+import { getDataFile, resolveAnnotation as resolveAnnotationApi } from "~/ui/api-client";
 import { CollapsibleSection } from "~/ui/features/_shared/collapsible-section";
 import {
   dividedSectionClassName,
@@ -15,6 +15,7 @@ import {
   getStatusStyle,
 } from "~/ui/features/_shared/status-config";
 import { renderAnnotation } from "~/ui/features/node/annotation-timeline";
+import { JsonViewer } from "~/ui/features/node/json-viewer";
 import { renderContentFile } from "~/ui/features/node/result-renderers";
 
 interface NodeDetailViewProps {
@@ -132,6 +133,214 @@ function CollapsibleContentFile({
         </div>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Data file helpers
+// ---------------------------------------------------------------------------
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+interface SchemaHeader {
+  title?: string;
+  description?: string;
+}
+
+function extractSchemaHeader(content: string): SchemaHeader | null {
+  try {
+    const parsed = JSON.parse(content) as Record<string, unknown>;
+    const title = typeof parsed["title"] === "string" ? parsed["title"] : undefined;
+    const description = typeof parsed["description"] === "string" ? parsed["description"] : undefined;
+    if (title ?? description) return { title, description };
+  } catch {
+    // Not valid JSON or no relevant fields
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Collapsible data file entry
+// ---------------------------------------------------------------------------
+
+interface CollapsibleDataFileProps {
+  entry: DataFileEntry;
+  nodeId: string;
+  graphPath?: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  cache: Map<string, string>;
+  onCacheUpdate: (filename: string, content: string) => void;
+}
+
+function CollapsibleDataFile({
+  entry,
+  nodeId,
+  graphPath,
+  isOpen,
+  onToggle,
+  cache,
+  onCacheUpdate,
+}: CollapsibleDataFileProps) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isSchema = entry.filename === "schema.json";
+  const cachedContent = cache.get(entry.filename);
+
+  function handleToggle() {
+    onToggle();
+
+    // Fetch on first expand if not cached
+    if (!isOpen && !cachedContent && !loading) {
+      setLoading(true);
+      setError(null);
+      getDataFile(nodeId, entry.filename, graphPath).then(
+        (result) => {
+          const content = result.dataFiles[0]?.content ?? "";
+          onCacheUpdate(entry.filename, content);
+          setLoading(false);
+        },
+        (err) => {
+          setError(err instanceof Error ? err.message : "Failed to load");
+          setLoading(false);
+        },
+      );
+    }
+  }
+
+  // Parse JSON content for the viewer
+  let parsedJson: JsonValue | null = null;
+  let schemaHeader: SchemaHeader | null = null;
+  if (cachedContent) {
+    try {
+      parsedJson = JSON.parse(cachedContent) as JsonValue;
+    } catch {
+      // Will render as plain text
+    }
+    if (isSchema) {
+      schemaHeader = extractSchemaHeader(cachedContent);
+    }
+  }
+
+  return (
+    <div className="-mx-8 border border-stone-200/40 dark:border-stone-800/30 bg-background/70">
+      <button
+        type="button"
+        onClick={handleToggle}
+        className="flex w-full items-center gap-2 px-4 py-2 text-left font-mono text-[11px] text-stone-500 dark:text-stone-400 transition-colors hover:bg-stone-100/60 dark:hover:bg-stone-800/40"
+      >
+        <span
+          className={`text-[9px] text-stone-400 dark:text-stone-600 transition-transform ${isOpen ? "rotate-90" : ""}`}
+        >
+          &#9654;
+        </span>
+        <span className="truncate">{entry.filename}</span>
+        {isSchema && (
+          <span className="rounded bg-stone-200/50 dark:bg-stone-800/50 px-1.5 py-0.5 text-[9px] font-medium text-stone-500 dark:text-stone-400">
+            Schema
+          </span>
+        )}
+        <span className="ml-auto shrink-0 text-[10px] text-stone-400 dark:text-stone-600">
+          {formatFileSize(entry.size)}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="border-t border-stone-200/30 dark:border-stone-800/20 px-8 pb-3 pt-2">
+          {loading && (
+            <div className="animate-pulse text-[11px] text-stone-400 dark:text-stone-600">
+              Loading...
+            </div>
+          )}
+          {error && (
+            <div className="text-[11px] text-red-500 dark:text-red-400">
+              {error}
+            </div>
+          )}
+          {cachedContent !== undefined && !loading && !error && (
+            <>
+              {isSchema && schemaHeader && (
+                <div className="mb-3 space-y-0.5">
+                  {schemaHeader.title && (
+                    <div className="text-[12px] font-medium text-stone-700 dark:text-stone-300">
+                      {schemaHeader.title}
+                    </div>
+                  )}
+                  {schemaHeader.description && (
+                    <div className="text-[11px] text-stone-500 dark:text-stone-400">
+                      {schemaHeader.description}
+                    </div>
+                  )}
+                </div>
+              )}
+              {parsedJson !== null ? (
+                <JsonViewer data={parsedJson} />
+              ) : (
+                <pre className="overflow-x-auto text-[11px] text-stone-600 dark:text-stone-400 whitespace-pre-wrap">
+                  {cachedContent}
+                </pre>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Data section
+// ---------------------------------------------------------------------------
+
+interface DataSectionProps {
+  dataFiles: DataFileEntry[];
+  nodeId: string;
+  graphPath?: string;
+}
+
+function DataSection({ dataFiles, nodeId, graphPath }: DataSectionProps) {
+  const [openDataFile, setOpenDataFile] = useState<string | null>(null);
+  const [dataCache, setDataCache] = useState<Map<string, string>>(new Map());
+
+  function handleCacheUpdate(filename: string, content: string) {
+    setDataCache((prev) => new Map(prev).set(filename, content));
+  }
+
+  // Sort so schema.json appears first
+  const sorted = [...dataFiles].sort((a, b) => {
+    if (a.filename === "schema.json") return -1;
+    if (b.filename === "schema.json") return 1;
+    return a.filename.localeCompare(b.filename);
+  });
+
+  return (
+    <section className={`px-6 ${dividedSectionClassName}`}>
+      <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+        Data
+      </h2>
+      <div className="space-y-1">
+        {sorted.map((entry) => (
+          <CollapsibleDataFile
+            key={entry.filename}
+            entry={entry}
+            nodeId={nodeId}
+            graphPath={graphPath}
+            isOpen={openDataFile === entry.filename}
+            onToggle={() =>
+              setOpenDataFile((prev) =>
+                prev === entry.filename ? null : entry.filename,
+              )
+            }
+            cache={dataCache}
+            onCacheUpdate={handleCacheUpdate}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -324,6 +533,15 @@ function NodeDetailView({ node, section, graphPath }: NodeDetailViewProps) {
             })}
           </div>
         </section>
+      )}
+
+      {/* Data files — lazy-loaded collapsible entries with JSON rendering */}
+      {node.dataFiles.length > 0 && (
+        <DataSection
+          dataFiles={node.dataFiles}
+          nodeId={node.id}
+          graphPath={graphPath}
+        />
       )}
       </div>
     </div>

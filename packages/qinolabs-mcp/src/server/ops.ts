@@ -18,6 +18,7 @@ import type {
   AnnotationMeta,
 } from "./types.js";
 import { buildGraphLinks, buildNodeLinks } from "./deeplinks.js";
+import type { FileWatcher } from "./file-watcher.js";
 
 // ---------------------------------------------------------------------------
 // Operations Interface
@@ -64,6 +65,19 @@ export interface ResolveAnnotationArgs {
   graphPath?: string;
 }
 
+export interface ReadDataArgs {
+  nodeId: string;
+  filename?: string;
+  graphPath?: string;
+}
+
+export interface WriteDataArgs {
+  nodeId: string;
+  filename: string;
+  data: string;
+  graphPath?: string;
+}
+
 /**
  * Protocol operations interface.
  *
@@ -91,6 +105,14 @@ export interface ProtocolOps {
   resolveAnnotation(
     args: ResolveAnnotationArgs,
   ): Promise<{ success: true; meta: AnnotationMeta }>;
+
+  // Data operations
+  readData(
+    args: ReadDataArgs,
+  ): Promise<{ dataFiles: Array<{ filename: string; content: string }>; schema?: string }>;
+  writeData(
+    args: WriteDataArgs,
+  ): Promise<{ success: true; filename: string }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +129,8 @@ import {
   writeJournalEntry as fsWriteJournalEntry,
   updateView as fsUpdateView,
   resolveAnnotation as fsResolveAnnotation,
+  readData as fsReadData,
+  writeData as fsWriteData,
 } from "./protocol-reader.js";
 
 /**
@@ -125,6 +149,7 @@ export function createDirectOps(
   _repoRoot: string | null,
   baseUrl: string,
   knownWorkspaces?: ReadonlySet<string>,
+  watcher?: FileWatcher,
 ): ProtocolOps {
   const resolveGraphDir = (graphPath?: string) =>
     graphPath ? `${workspaceDir}/${graphPath}` : workspaceDir;
@@ -156,18 +181,20 @@ export function createDirectOps(
 
     writeAnnotation: async (args) => {
       const graphDir = resolveGraphDir(args.graphPath);
-      return fsWriteAnnotation(
+      const result = await fsWriteAnnotation(
         graphDir,
         args.nodeId,
         args.signal,
         args.body,
         args.target,
       );
+      watcher?.push({ type: "annotation", nodeId: args.nodeId, graphPath: args.graphPath });
+      return result;
     },
 
     createNode: async (args) => {
       const graphDir = resolveGraphDir(args.graphPath);
-      return fsCreateNode(graphDir, {
+      const result = await fsCreateNode(graphDir, {
         id: args.id,
         dir: args.dir,
         title: args.title,
@@ -177,33 +204,53 @@ export function createDirectOps(
         edges: args.edges,
         view: args.view,
       });
+      watcher?.push({ type: "graph", graphPath: args.graphPath });
+      return result;
     },
 
     writeJournalEntry: async (args) => {
       const graphDir = resolveGraphDir(args.graphPath);
-      return fsWriteJournalEntry(graphDir, {
+      const result = await fsWriteJournalEntry(graphDir, {
         context: args.context,
         body: args.body,
         nodeId: args.nodeId,
       });
+      watcher?.push({ type: "journal", graphPath: args.graphPath });
+      return result;
     },
 
     updateView: async (args) => {
       const graphDir = resolveGraphDir(args.graphPath);
-      return fsUpdateView(graphDir, args.nodeId, {
+      const result = await fsUpdateView(graphDir, args.nodeId, {
         focal: args.focal,
         includes: args.includes,
       });
+      watcher?.push({ type: "node", nodeId: args.nodeId, graphPath: args.graphPath });
+      return result;
     },
 
     resolveAnnotation: async (args) => {
       const graphDir = resolveGraphDir(args.graphPath);
-      return fsResolveAnnotation(
+      const result = await fsResolveAnnotation(
         graphDir,
         args.nodeId,
         args.filename,
         args.status,
       );
+      watcher?.push({ type: "annotation", nodeId: args.nodeId, graphPath: args.graphPath });
+      return result;
+    },
+
+    readData: async (args) => {
+      const graphDir = resolveGraphDir(args.graphPath);
+      return fsReadData(graphDir, args.nodeId, args.filename);
+    },
+
+    writeData: async (args) => {
+      const graphDir = resolveGraphDir(args.graphPath);
+      const result = await fsWriteData(graphDir, args.nodeId, args.filename, args.data);
+      watcher?.push({ type: "node", nodeId: args.nodeId, graphPath: args.graphPath });
+      return result;
     },
   };
 }
@@ -371,6 +418,42 @@ export function createHttpOps(apiUrl: string): ProtocolOps {
         },
       );
       return handleResponse<{ success: true; meta: AnnotationMeta }>(res);
+    },
+
+    readData: async (args) => {
+      const params: Record<string, string> = {};
+      if (args.graphPath) params["path"] = args.graphPath;
+      if (args.filename) {
+        const res = await fetch(
+          buildUrl(
+            `/api/nodes/${encodeURIComponent(args.nodeId)}/data/${encodeURIComponent(args.filename)}`,
+            Object.keys(params).length > 0 ? params : undefined,
+          ),
+        );
+        return handleResponse<{ dataFiles: Array<{ filename: string; content: string }>; schema?: string }>(res);
+      }
+      const res = await fetch(
+        buildUrl(
+          `/api/nodes/${encodeURIComponent(args.nodeId)}/data`,
+          Object.keys(params).length > 0 ? params : undefined,
+        ),
+      );
+      return handleResponse<{ dataFiles: Array<{ filename: string; content: string }>; schema?: string }>(res);
+    },
+
+    writeData: async (args) => {
+      const res = await fetch(
+        buildUrl(
+          `/api/nodes/${encodeURIComponent(args.nodeId)}/data/${encodeURIComponent(args.filename)}`,
+          args.graphPath ? { path: args.graphPath } : undefined,
+        ),
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: args.data }),
+        },
+      );
+      return handleResponse<{ success: true; filename: string }>(res);
     },
   };
 }

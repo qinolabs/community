@@ -27,6 +27,7 @@ import type {
   AnnotationStatus,
   BreadcrumbItem,
   ContentFile,
+  DataFileEntry,
   GraphData,
   GraphEdge,
   GraphNodeEntry,
@@ -524,6 +525,29 @@ async function readContentFiles(contentDir: string): Promise<ContentFile[]> {
 }
 
 /**
+ * Read data file index from a node's data/ directory.
+ *
+ * Returns filename + size (bytes) for each JSON file found.
+ * Does NOT read file content — agents fetch full content via read_data.
+ */
+async function readDataFileIndex(dataDir: string): Promise<DataFileEntry[]> {
+  const files = await listDir(dataDir);
+  const entries: DataFileEntry[] = [];
+
+  for (const filename of files.sort()) {
+    if (!filename.endsWith(".json")) continue;
+    try {
+      const stat = await fs.stat(path.join(dataDir, filename));
+      entries.push({ filename, size: stat.size });
+    } catch {
+      // Skip files we can't stat
+    }
+  }
+
+  return entries;
+}
+
+/**
  * Resolve the directory name where node directories live.
  * Defaults to "nodes" when graph.json doesn't specify nodesDir.
  */
@@ -737,8 +761,9 @@ export async function readNode(
     ? parseJournalSections(journalRaw)
     : [];
 
-  const [contentFiles, modified] = await Promise.all([
+  const [contentFiles, dataFiles, modified] = await Promise.all([
     readContentFiles(path.join(nodeDir, "content")),
+    readDataFileIndex(path.join(nodeDir, "data")),
     getNodeMtime(nodeDir),
   ]);
 
@@ -829,6 +854,7 @@ export async function readNode(
     identity,
     story,
     contentFiles,
+    dataFiles,
     annotations,
     hasSubGraph,
     subGraphPath,
@@ -1056,7 +1082,7 @@ export async function readLandingData(
     : [];
   const arcs = rootNodes.filter((n) => n.type === "arc");
   const navigators: NavigatorEntry[] = rootNodes
-    .filter((n) => n.type === "navigator")
+    .filter((n) => n.type === "navigator" && n.status !== "composted" && n.status !== "completed")
     .map((n) => ({ ...n, graphPath: "_root" }));
 
   // Collect views from all workspaces (nodes with hasView: true or type: "view")
@@ -1103,17 +1129,21 @@ export async function readLandingData(
       // Record full relative path for sub-graph deduplication
       knownNodePaths.add(path.join(ws.path, wsNodesDir, node.dir));
 
-      // Collect views for dedicated views section
+      // Collect views for dedicated views section (skip composted/completed)
       if (node.hasView || node.type === "view") {
-        views.push({
-          ...node,
-          graphPath: ws.path,
-          workspaceName: ws.name,
-        });
+        if (node.status !== "composted" && node.status !== "completed") {
+          views.push({
+            ...node,
+            graphPath: ws.path,
+            workspaceName: ws.name,
+          });
+        }
         continue;
       }
       if (node.type === "navigator") {
-        navigators.push({ ...node, graphPath: ws.path });
+        if (node.status !== "composted" && node.status !== "completed") {
+          navigators.push({ ...node, graphPath: ws.path });
+        }
         continue;
       }
       if (node.type === "arc") continue;
@@ -1656,4 +1686,142 @@ export async function updateView(
   await fs.writeFile(graphPath, JSON.stringify(graphData, null, 2), "utf-8");
 
   return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Data Operations
+// ---------------------------------------------------------------------------
+
+/** A data file with its full content (returned by readData). */
+export interface DataFileContent {
+  filename: string;
+  content: string;
+}
+
+/**
+ * Read data file(s) from a node's data/ directory.
+ *
+ * If filename is provided, returns that specific file.
+ * If omitted, returns all data files.
+ * Also returns schema.json content if it exists (separate from data files).
+ */
+export async function readData(
+  graphDir: string,
+  nodeId: string,
+  filename?: string,
+): Promise<{ dataFiles: DataFileContent[]; schema?: string }> {
+  const graphData = await readJsonFile<GraphData>(
+    path.join(graphDir, "graph.json"),
+  );
+
+  if (!graphData) {
+    throw new Error(`No graph.json found in: ${graphDir}`);
+  }
+
+  const nodesDir = resolveNodesDir(graphData);
+  const nodeDir = await resolveNodeDir(graphDir, nodesDir, nodeId);
+  if (!nodeDir) {
+    throw new Error(`Node not found: ${nodeId}`);
+  }
+
+  const dataDir = path.join(nodeDir, "data");
+
+  // Read schema if it exists
+  const schemaContent = await readTextFile(path.join(dataDir, "schema.json"));
+
+  if (filename) {
+    // Read a specific file
+    const content = await readTextFile(path.join(dataDir, filename));
+    if (content === null) {
+      throw new Error(`Data file not found: ${filename}`);
+    }
+    return {
+      dataFiles: [{ filename, content }],
+      ...(schemaContent ? { schema: schemaContent } : {}),
+    };
+  }
+
+  // Read all data files
+  const files = await listDir(dataDir);
+  const dataFiles: DataFileContent[] = [];
+
+  for (const file of files.sort()) {
+    if (!file.endsWith(".json")) continue;
+    if (file === "schema.json") continue; // Schema returned separately
+    const content = await readTextFile(path.join(dataDir, file));
+    if (content !== null) {
+      dataFiles.push({ filename: file, content });
+    }
+  }
+
+  return {
+    dataFiles,
+    ...(schemaContent ? { schema: schemaContent } : {}),
+  };
+}
+
+/**
+ * Write a structured data file to a node's data/ directory.
+ *
+ * Creates the data/ directory if it doesn't exist.
+ * Validates input is valid JSON (parse check).
+ * Echoes to node journal on first write (when data/ directory is created).
+ */
+export async function writeData(
+  graphDir: string,
+  nodeId: string,
+  filename: string,
+  data: string,
+): Promise<{ success: true; filename: string }> {
+  const graphData = await readJsonFile<GraphData>(
+    path.join(graphDir, "graph.json"),
+  );
+
+  if (!graphData) {
+    throw new Error(`No graph.json found in: ${graphDir}`);
+  }
+
+  const nodesDir = resolveNodesDir(graphData);
+  const nodeDir = await resolveNodeDir(graphDir, nodesDir, nodeId);
+  if (!nodeDir) {
+    throw new Error(`Node not found: ${nodeId}`);
+  }
+
+  // Validate JSON
+  try {
+    JSON.parse(data);
+  } catch {
+    throw new Error(`Invalid JSON data for file: ${filename}`);
+  }
+
+  const dataDir = path.join(nodeDir, "data");
+
+  // Check if data/ directory already exists (for journal echo decision)
+  const dataDirExists = await fileExists(dataDir);
+
+  // Create data/ directory if needed
+  await fs.mkdir(dataDir, { recursive: true });
+
+  // Write the data file
+  await fs.writeFile(path.join(dataDir, filename), data, "utf-8");
+
+  // Journal echo on first write (data/ directory creation)
+  if (!dataDirExists) {
+    const journalPath = path.join(nodeDir, "journal.md");
+    const now = new Date().toISOString().slice(0, 10);
+    const echo = `\n\n## data attached\n\n<!-- context: node/${nodeId} -->\n\nStructured data directory created. First file: ${filename}\n`;
+
+    try {
+      await fs.appendFile(journalPath, echo, "utf-8");
+    } catch {
+      // Journal doesn't exist — create with this entry
+      await fs.writeFile(
+        journalPath,
+        `## ${now}\n\n<!-- context: session/${now} -->\n${echo}`,
+        "utf-8",
+      );
+    }
+  }
+
+  return { success: true, filename };
 }

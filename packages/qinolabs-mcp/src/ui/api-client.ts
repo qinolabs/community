@@ -183,6 +183,18 @@ export async function updateView(
   return res.json() as Promise<{ success: true }>;
 }
 
+export function getDataFile(
+  nodeId: string,
+  filename: string,
+  graphPath?: string,
+) {
+  const base = `/api/nodes/${encodeURIComponent(nodeId)}/data/${encodeURIComponent(filename)}`;
+  const url = graphPath
+    ? `${base}?path=${encodeURIComponent(graphPath)}`
+    : base;
+  return fetchJson<{ dataFiles: Array<{ filename: string; content: string }> }>(url);
+}
+
 export async function writeJournalEntry(
   opts: { context: string; body: string; nodeId?: string },
   graphPath?: string,
