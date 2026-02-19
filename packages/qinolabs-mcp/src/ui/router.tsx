@@ -54,7 +54,7 @@ const graphSearchSchema = z.object({
 const nodeSearchSchema = z.object({
   section: z.string().optional(),
   at: z.string().optional(), // sub-graph context (renamed from 'path')
-  view: z.enum(["details", "graph", "view"]).optional(), // active tab
+  view: z.enum(["details", "graph", "view", "viz"]).optional(), // active tab
 });
 
 // ── Route tree ───────────────────────────────────────────────────

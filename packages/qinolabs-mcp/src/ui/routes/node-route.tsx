@@ -1,17 +1,18 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, Workflow } from "lucide-react";
+import { ChartNoAxesColumn, Eye, Workflow } from "lucide-react";
 
 import { Tabs, CompactTab, CompactTabsList } from "~/ui/features/_shared/compact-tabs";
 import { dottedBackgroundStyle } from "~/ui/features/_shared/dotted-background";
 import { WorkspaceGraph } from "~/ui/features/graph/workspace-graph";
+import { DataVisualizationView } from "~/ui/features/node/data-visualization-view";
 import { NodeDetailView, StatusBadge } from "~/ui/features/node/node-detail";
 import { useWorkspaceData } from "~/ui/features/workspace/workspace-context";
 import { computeGraphPath } from "~/ui/lib/graph-path";
 import { graphQueryOptions, nodeQueryOptions } from "~/ui/query-options";
 import { useDocumentTitle } from "~/ui/use-document-title";
 
-type NodeViewTab = "details" | "graph" | "view";
+type NodeViewTab = "details" | "graph" | "view" | "viz";
 type NavigationTab = "workspace" | "parent";
 
 
@@ -27,7 +28,9 @@ function NodeView() {
 
   // Determine active view — default to details
   const activeView: NodeViewTab =
-    search.view === "graph" || search.view === "view" ? search.view : "details";
+    search.view === "graph" || search.view === "view" || search.view === "viz"
+      ? search.view
+      : "details";
 
   // Full graph path for API calls (workspace + subPath)
   const graphPath = computeGraphPath(workspace, search.at);
@@ -62,6 +65,9 @@ function NodeView() {
 
   // Check if node has a view (curated attention space)
   const hasView = node?.view !== null && node?.view !== undefined;
+
+  // Check if node has data files with a schema (potential visualization)
+  const canVisualize = (node?.dataFiles ?? []).some((f) => f.filename === "schema.json");
 
   // Breadcrumb provides full navigation ancestry from server
   // breadcrumb[0] is always workspace root (id: null)
@@ -148,6 +154,17 @@ function NodeView() {
                   <span>View</span>
                 </CompactTab>
               )}
+              {/* Data visualization tab */}
+              {canVisualize && (
+                <CompactTab
+                  value="viz"
+                  className="gap-1.5 py-1 text-sm!"
+                  onClick={() => handleTabClick("viz")}
+                >
+                  <ChartNoAxesColumn className="size-3.5" />
+                  <span>View</span>
+                </CompactTab>
+              )}
             </CompactTabsList>
           </Tabs>
         </div>
@@ -174,7 +191,12 @@ function NodeView() {
 
       {/* Content area — switches between detail view, sub-graph, and view */}
       {activeView === "details" && node && (
-        <NodeDetailView node={node} section={search.section} graphPath={graphPath} />
+        <NodeDetailView
+          node={node}
+          section={search.section}
+          graphPath={graphPath}
+          onNavigateToViz={canVisualize ? () => handleTabClick("viz") : undefined}
+        />
       )}
 
       {activeView === "graph" && subGraph && subGraphFullPath && (
@@ -204,6 +226,10 @@ function NodeView() {
           highlightNodeIds={node.view.includes}
           focusNodeId={node.view.focal}
         />
+      )}
+
+      {activeView === "viz" && node && (
+        <DataVisualizationView node={node} graphPath={graphPath} />
       )}
     </div>
   );
