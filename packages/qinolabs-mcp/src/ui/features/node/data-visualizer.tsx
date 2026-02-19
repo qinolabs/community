@@ -117,10 +117,9 @@ function getNestedValue(obj: Record<string, JsonValue>, path: string): JsonValue
 
 const CHART_COLORS = {
   text: "#a8a29e", // stone-400
-  barFill: "#78716c", // stone-500
-  barStroke: "#57534e", // stone-600
   gridStroke: "#44403c", // stone-700
-  heatmapScheme: "YlOrRd" as const,
+  /** Divergent pink↔green scheme — low scores pink, mid yellow, high green */
+  scheme: "PiYG" as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -151,37 +150,34 @@ function BarChart({ data, hint, label }: BarChartProps) {
 
     const isHorizontal = hint.orientation !== "vertical";
 
+    const domain = hint.range ?? [0, Math.max(...entries.map((e) => e.value)) * 1.1];
+
     const plot = Plot.plot({
       width: containerRef.current.clientWidth,
       height: Math.max(entries.length * 32 + 40, 120),
-      marginLeft: isHorizontal ? 80 : 40,
+      marginLeft: isHorizontal ? 100 : 40,
       marginBottom: isHorizontal ? 24 : 40,
       marginTop: 8,
-      marginRight: 16,
+      marginRight: 40,
       style: {
         background: "transparent",
         color: CHART_COLORS.text,
         fontSize: "11px",
       },
       x: isHorizontal
-        ? {
-            label: null,
-            domain: hint.range ?? [0, Math.max(...entries.map((e) => e.value)) * 1.1],
-            grid: true,
-          }
+        ? { label: null, domain, grid: true }
         : { label: null, type: "band" as const, padding: 0.3 },
       y: isHorizontal
         ? { label: null, type: "band" as const, padding: 0.3 }
-        : {
-            label: null,
-            domain: hint.range ?? [0, Math.max(...entries.map((e) => e.value)) * 1.1],
-            grid: true,
-          },
+        : { label: null, domain, grid: true },
       color: {
-        range: ["#78716c", "#a8a29e"],
+        type: "diverging",
+        domain,
+        pivot: domain[0] + (domain[1] - domain[0]) / 2,
+        scheme: CHART_COLORS.scheme,
       },
       marks: [
-        // Grid rule at domain boundaries
+        // Grid rule at domain start
         ...(hint.range
           ? [Plot.ruleX(isHorizontal ? [hint.range[0]] : [], { stroke: CHART_COLORS.gridStroke, strokeDasharray: "2,3" })]
           : []),
@@ -189,18 +185,14 @@ function BarChart({ data, hint, label }: BarChartProps) {
           ? Plot.barX(entries, {
               x: "value",
               y: "dimension",
-              fill: CHART_COLORS.barFill,
-              stroke: CHART_COLORS.barStroke,
-              strokeWidth: 0.5,
+              fill: "value",
               sort: { y: "-x" },
               tip: true,
             })
           : Plot.barY(entries, {
               x: "dimension",
               y: "value",
-              fill: CHART_COLORS.barFill,
-              stroke: CHART_COLORS.barStroke,
-              strokeWidth: 0.5,
+              fill: "value",
               tip: true,
             }),
         // Value labels
@@ -345,9 +337,13 @@ function Heatmap({ data, hint, label }: HeatmapProps) {
         domain: yDims,
       },
       color: {
-        type: "linear",
-        scheme: CHART_COLORS.heatmapScheme,
+        type: "diverging",
+        scheme: CHART_COLORS.scheme,
         domain: hint.range ?? [1, 5],
+        pivot: (() => {
+          const r = hint.range ?? [1, 5];
+          return r[0] + (r[1] - r[0]) / 2;
+        })(),
         label: "Score",
         legend: true,
       },
@@ -364,8 +360,12 @@ function Heatmap({ data, hint, label }: HeatmapProps) {
           x: "x",
           y: "y",
           text: (d: { value: number }) => String(d.value),
-          fill: (d: { value: number }) =>
-            d.value >= ((hint.range?.[1] ?? 5) * 0.6) ? "#1c1917" : "#e7e5e4",
+          fill: (d: { value: number }) => {
+            const range = hint.range ?? [1, 5];
+            const ratio = (d.value - range[0]) / (range[1] - range[0]);
+            // PiYG: low=dark pink (light text), mid=pale yellow (dark text), high=dark green (light text)
+            return ratio <= 0.25 || ratio >= 0.75 ? "#fef2f2" : "#1c1917";
+          },
           fontSize: 10,
           fontWeight: "bold",
         }),
