@@ -15,6 +15,7 @@ import {
   getStatusStyle,
 } from "~/ui/features/_shared/status-config";
 import { renderAnnotation } from "~/ui/features/node/annotation-timeline";
+import { DataVisualizer, hasViewHints } from "~/ui/features/node/data-visualizer";
 import { JsonViewer } from "~/ui/features/node/json-viewer";
 import { renderContentFile } from "~/ui/features/node/result-renderers";
 
@@ -167,6 +168,8 @@ function extractSchemaHeader(content: string): SchemaHeader | null {
 // Collapsible data file entry
 // ---------------------------------------------------------------------------
 
+type DataViewMode = "chart" | "json";
+
 interface CollapsibleDataFileProps {
   entry: DataFileEntry;
   nodeId: string;
@@ -175,6 +178,8 @@ interface CollapsibleDataFileProps {
   onToggle: () => void;
   cache: Map<string, string>;
   onCacheUpdate: (filename: string, content: string) => void;
+  /** Parsed schema.json (if available) for x-view hint detection. */
+  parsedSchema: JsonValue | null;
 }
 
 function CollapsibleDataFile({
@@ -185,12 +190,17 @@ function CollapsibleDataFile({
   onToggle,
   cache,
   onCacheUpdate,
+  parsedSchema,
 }: CollapsibleDataFileProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<DataViewMode>("chart");
 
   const isSchema = entry.filename === "schema.json";
   const cachedContent = cache.get(entry.filename);
+
+  // Determine if this file has visualization support
+  const canVisualize = !isSchema && parsedSchema !== null && hasViewHints(parsedSchema);
 
   function handleToggle() {
     onToggle();
@@ -277,7 +287,37 @@ function CollapsibleDataFile({
                   )}
                 </div>
               )}
-              {parsedJson !== null ? (
+              {/* View mode toggle — only when visualization is available */}
+              {canVisualize && parsedJson !== null && (
+                <div className="mb-3 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("chart")}
+                    className={`rounded px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                      viewMode === "chart"
+                        ? "bg-stone-200/60 dark:bg-stone-700/50 text-stone-700 dark:text-stone-300"
+                        : "text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-400"
+                    }`}
+                  >
+                    Chart
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("json")}
+                    className={`rounded px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                      viewMode === "json"
+                        ? "bg-stone-200/60 dark:bg-stone-700/50 text-stone-700 dark:text-stone-300"
+                        : "text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-400"
+                    }`}
+                  >
+                    JSON
+                  </button>
+                </div>
+              )}
+              {/* Visualization or JSON viewer */}
+              {canVisualize && parsedJson !== null && viewMode === "chart" ? (
+                <DataVisualizer data={parsedJson} schema={parsedSchema} />
+              ) : parsedJson !== null ? (
                 <JsonViewer data={parsedJson} />
               ) : (
                 <pre className="overflow-x-auto text-[11px] text-stone-600 dark:text-stone-400 whitespace-pre-wrap">
@@ -305,9 +345,50 @@ interface DataSectionProps {
 function DataSection({ dataFiles, nodeId, graphPath }: DataSectionProps) {
   const [openDataFile, setOpenDataFile] = useState<string | null>(null);
   const [dataCache, setDataCache] = useState<Map<string, string>>(new Map());
+  const [parsedSchema, setParsedSchema] = useState<JsonValue | null>(null);
+
+  // Eagerly fetch schema.json if present — needed to detect x-view hints
+  const hasSchema = dataFiles.some((f) => f.filename === "schema.json");
+  useEffect(() => {
+    if (!hasSchema) return;
+
+    // Check if already cached
+    const cached = dataCache.get("schema.json");
+    if (cached) {
+      try {
+        setParsedSchema(JSON.parse(cached) as JsonValue);
+      } catch {
+        // Invalid JSON, no schema
+      }
+      return;
+    }
+
+    getDataFile(nodeId, "schema.json", graphPath).then(
+      (result) => {
+        const content = result.dataFiles[0]?.content ?? "";
+        setDataCache((prev) => new Map(prev).set("schema.json", content));
+        try {
+          setParsedSchema(JSON.parse(content) as JsonValue);
+        } catch {
+          // Invalid JSON, no schema
+        }
+      },
+      () => {
+        // Schema fetch failed — proceed without visualization
+      },
+    );
+  }, [hasSchema, nodeId, graphPath]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleCacheUpdate(filename: string, content: string) {
     setDataCache((prev) => new Map(prev).set(filename, content));
+    // If schema was just fetched via expand, parse it
+    if (filename === "schema.json") {
+      try {
+        setParsedSchema(JSON.parse(content) as JsonValue);
+      } catch {
+        // Invalid JSON
+      }
+    }
   }
 
   // Sort so schema.json appears first
@@ -337,6 +418,7 @@ function DataSection({ dataFiles, nodeId, graphPath }: DataSectionProps) {
             }
             cache={dataCache}
             onCacheUpdate={handleCacheUpdate}
+            parsedSchema={parsedSchema}
           />
         ))}
       </div>

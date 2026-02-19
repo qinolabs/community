@@ -4,7 +4,9 @@
   "type": "module",
   "description": "MCP server + browser UI for working with qino-protocol workspaces",
   "license": "MIT",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "bin": {
     "qinolabs-mcp": "./dist/server/index.js"
   },
@@ -24,6 +26,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@observablehq/plot": "^0.6.17",
     "@qinolabs/tsconfig": "workspace:*",
     "@qinolabs/ui-core": "^0.1.0",
     "@tailwindcss/typography": "^0.5.19",
