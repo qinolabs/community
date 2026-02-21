@@ -29,7 +29,15 @@ import {
   updateView,
   readData,
   writeData,
+  resolveTargetPath,
 } from "./protocol-reader.js";
+
+import {
+  assertWithinWorkspace,
+  resolveEditorCommand,
+  revealInExplorer,
+  openInEditor,
+} from "./shell-actions.js";
 
 import type { AgentSignal, JournalSection } from "./types.js";
 import { buildGraphLinks, buildNodeLinks } from "./deeplinks.js";
@@ -406,6 +414,69 @@ export function createApi(
 
     const result = await checkpointJournal(graphDir, repoRoot);
     return c.json(result);
+  });
+
+  // ── Shell action endpoints ───────────────────────────────────────
+
+  app.post("/api/reveal", async (c) => {
+    const body = await c.req.json<{
+      graphPath?: string;
+      nodeId?: string;
+      file?: string;
+    }>();
+
+    const targetPath = await resolveTargetPath(workspaceDir, body);
+    if (!targetPath) {
+      return c.json({ error: "Path not found" }, 404);
+    }
+
+    try {
+      assertWithinWorkspace(targetPath, workspaceDir);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Path validation failed";
+      return c.json({ error: message }, 403);
+    }
+
+    try {
+      await revealInExplorer(targetPath);
+      return c.json({ success: true, path: targetPath });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to reveal";
+      return c.json({ error: message }, 500);
+    }
+  });
+
+  app.post("/api/open", async (c) => {
+    const body = await c.req.json<{
+      graphPath?: string;
+      nodeId?: string;
+      file?: string;
+      line?: number;
+    }>();
+
+    const targetPath = await resolveTargetPath(workspaceDir, body);
+    if (!targetPath) {
+      return c.json({ error: "Path not found" }, 404);
+    }
+
+    try {
+      assertWithinWorkspace(targetPath, workspaceDir);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Path validation failed";
+      return c.json({ error: message }, 403);
+    }
+
+    // Resolve editor command from config (read on each call to pick up changes)
+    const config = await readConfig(workspaceDir);
+    const editor = resolveEditorCommand(config.editor);
+
+    try {
+      await openInEditor(targetPath, editor, body.line);
+      return c.json({ success: true, path: targetPath, editor });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to open in editor";
+      return c.json({ error: message }, 500);
+    }
   });
 
   // ── Static SPA serving (production only) ───────────────────────

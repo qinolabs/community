@@ -171,6 +171,8 @@ export interface StatusConfig {
 export interface WorkspaceConfig {
   repoType?: string;
   name?: string;
+  /** Preferred editor command (e.g., "cursor", "zed"). Overridden by QINO_EDITOR env var. */
+  editor?: string;
   types?: Record<string, TypeConfig>;
   statuses?: Record<string, StatusConfig>;
   workspaces?: Record<string, { path: string }>;

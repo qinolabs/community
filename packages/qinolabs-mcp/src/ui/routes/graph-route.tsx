@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { AppWindowMac } from "lucide-react";
 import { Tabs, CompactTab, CompactTabsList } from "~/ui/features/_shared/compact-tabs";
+import { ShellActionButtons } from "~/ui/features/_shared/shell-actions";
 
 import type { GraphEdge, GraphWithJournal } from "~/server/types";
 import { WorkspaceGraph } from "~/ui/features/graph/workspace-graph";
@@ -92,26 +93,29 @@ function GraphView() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* View tabs header — only shown when views exist */}
-      {viewNodes.length > 0 && (
-        <div className="flex shrink-0 items-center justify-end border-b border-stone-200/60 px-3 py-1.5 dark:border-stone-800/60">
-          <Tabs value={activeViewId ?? ""}>
-            <CompactTabsList>
-              {viewNodes.map((node) => (
-                <CompactTab
-                  key={node.id}
-                  value={node.id}
-                  className={viewTabExtraClassName}
-                  onClick={() => handleViewClick(node.id)}
-                >
-                  <AppWindowMac className={"size-4"} />
-                  {node.title}
-                </CompactTab>
-              ))}
-            </CompactTabsList>
-          </Tabs>
+      {/* Graph header — view tabs (if any) + shell actions */}
+      <div className="flex shrink-0 items-center justify-between border-b border-stone-200/60 px-3 py-1.5 dark:border-stone-800/60">
+        <div>
+          {viewNodes.length > 0 && (
+            <Tabs value={activeViewId ?? ""}>
+              <CompactTabsList>
+                {viewNodes.map((node) => (
+                  <CompactTab
+                    key={node.id}
+                    value={node.id}
+                    className={viewTabExtraClassName}
+                    onClick={() => handleViewClick(node.id)}
+                  >
+                    <AppWindowMac className={"size-4"} />
+                    {node.title}
+                  </CompactTab>
+                ))}
+              </CompactTabsList>
+            </Tabs>
+          )}
         </div>
-      )}
+        <ShellActionButtons graphPath={graphPath} />
+      </div>
 
       {/* Connected graph — ReactFlow */}
       <div className="relative min-h-0 flex-1">

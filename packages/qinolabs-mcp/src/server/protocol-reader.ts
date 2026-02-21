@@ -612,6 +612,44 @@ async function resolveNodeDir(
   return identity ? nodeDir : null;
 }
 
+/**
+ * Resolve the absolute directory path for a graph or node.
+ *
+ * Used by reveal/open actions to map graph coordinates to filesystem paths.
+ *
+ * - No nodeId: returns the graph directory itself
+ * - With nodeId: returns the node's directory within the graph
+ * - With file: returns the full path to a specific file within the resolved directory
+ *
+ * Returns null if the node directory doesn't exist.
+ */
+export async function resolveTargetPath(
+  workspaceDir: string,
+  opts: { graphPath?: string; nodeId?: string; file?: string },
+): Promise<string | null> {
+  const graphDir = opts.graphPath
+    ? path.join(workspaceDir, opts.graphPath)
+    : workspaceDir;
+
+  if (!opts.nodeId) {
+    // Graph-level: return the graph directory, optionally with file appended
+    const target = opts.file ? path.join(graphDir, opts.file) : graphDir;
+    return (await fileExists(opts.file ? graphDir : target)) ? target : null;
+  }
+
+  // Node-level: resolve nodesDir from graph.json, then find the node dir
+  const graphData = await readJsonFile<GraphData>(
+    path.join(graphDir, "graph.json"),
+  );
+  if (!graphData) return null;
+
+  const nodesDir = resolveNodesDir(graphData);
+  const nodeDir = await resolveNodeDir(graphDir, nodesDir, opts.nodeId);
+  if (!nodeDir) return null;
+
+  return opts.file ? path.join(nodeDir, opts.file) : nodeDir;
+}
+
 // ---------------------------------------------------------------------------
 // Read Operations
 // ---------------------------------------------------------------------------

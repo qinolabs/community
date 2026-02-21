@@ -588,4 +588,118 @@ Views are curated attention subsets — focus on part of a graph without losing 
       };
     },
   );
+
+  server.tool(
+    "reveal_in_explorer",
+    `Reveal a node or graph directory in the native file explorer (Finder on macOS, Explorer on Windows).
+
+WHEN TO USE:
+- User wants to see where files live on disk
+- Opening the filesystem context for a node or workspace
+- Quick access to edit files outside the protocol UI
+
+BEHAVIOR:
+- No nodeId: reveals the graph directory itself
+- With nodeId: reveals the node's directory
+- With file: reveals a specific file within the directory (highlighted in Finder on macOS)
+
+SECURITY: Only paths within the workspace root are allowed.`,
+    {
+      graphPath: z
+        .string()
+        .optional()
+        .describe(
+          "Relative path from workspace root to the graph. Omit for root graph.",
+        ),
+      nodeId: z
+        .string()
+        .optional()
+        .describe("Node identifier — reveals the node's directory instead of the graph directory"),
+      file: z
+        .string()
+        .optional()
+        .describe("Specific file within the resolved directory to reveal"),
+    },
+    async ({ graphPath, nodeId, file }) => {
+      try {
+        const result = await ops.revealInExplorer({ graphPath, nodeId, file });
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Revealed: ${result.path}`,
+            },
+          ],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to reveal";
+        return {
+          content: [{ type: "text" as const, text: message }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.tool(
+    "open_in_editor",
+    `Open a node or graph directory in the configured code editor.
+
+WHEN TO USE:
+- User wants to edit protocol files directly
+- Opening a specific file at a specific line
+- Quick jump from protocol browsing to code editing
+
+EDITOR RESOLUTION:
+1. QINO_EDITOR environment variable
+2. "editor" field in workspace qino-config.json
+3. Default: "code" (VS Code)
+
+BEHAVIOR:
+- No nodeId: opens the graph directory
+- With nodeId: opens the node's directory
+- With file: opens a specific file
+- With line: opens the file at that line number (uses --goto flag)
+
+SECURITY: Only paths within the workspace root are allowed.`,
+    {
+      graphPath: z
+        .string()
+        .optional()
+        .describe(
+          "Relative path from workspace root to the graph. Omit for root graph.",
+        ),
+      nodeId: z
+        .string()
+        .optional()
+        .describe("Node identifier — opens the node's directory instead of the graph directory"),
+      file: z
+        .string()
+        .optional()
+        .describe("Specific file within the resolved directory to open"),
+      line: z
+        .number()
+        .optional()
+        .describe("Line number to jump to (requires file). Uses editor's --goto flag."),
+    },
+    async ({ graphPath, nodeId, file, line }) => {
+      try {
+        const result = await ops.openInEditor({ graphPath, nodeId, file, line });
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Opened in ${result.editor}: ${result.path}`,
+            },
+          ],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to open in editor";
+        return {
+          content: [{ type: "text" as const, text: message }],
+          isError: true,
+        };
+      }
+    },
+  );
 }

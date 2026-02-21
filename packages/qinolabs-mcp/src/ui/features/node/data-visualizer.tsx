@@ -122,6 +122,18 @@ const CHART_COLORS = {
   scheme: "PiYG" as const,
 };
 
+/**
+ * Returns a text color that contrasts against the PiYG divergent fill.
+ *
+ * PiYG: extremes are dark (pink at low, green at high) → need light text.
+ * The midpoint is pale yellow/white → needs dark text.
+ */
+function contrastText(value: number, range: [number, number]): string {
+  const ratio = (value - range[0]) / (range[1] - range[0]);
+  // PiYG: only the darkest extremes need light text (scores 1-2 and 5)
+  return ratio <= 0.25 || ratio > 0.85 ? "#fef2f2" : "#1c1917";
+}
+
 // ---------------------------------------------------------------------------
 // Bar chart renderer
 // ---------------------------------------------------------------------------
@@ -168,7 +180,7 @@ function BarChart({ data, hint, label }: BarChartProps) {
         ? { label: null, domain, grid: true }
         : { label: null, type: "band" as const, padding: 0.3 },
       y: isHorizontal
-        ? { label: null, type: "band" as const, padding: 0.3 }
+        ? { axis: null, padding: 0.3 }
         : { label: null, domain, grid: true },
       color: {
         type: "diverging",
@@ -195,6 +207,19 @@ function BarChart({ data, hint, label }: BarChartProps) {
               fill: "value",
               tip: true,
             }),
+        // Dimension labels — explicit text mark (bypasses axis rendering)
+        ...(isHorizontal
+          ? [Plot.text(entries, {
+              x: domain[0],
+              y: "dimension",
+              text: "dimension",
+              textAnchor: "end",
+              dx: -12,
+              fill: (d: { value: number }) => contrastText(d.value, domain as [number, number]),
+              fontSize: 11,
+              sort: { y: "-x" },
+            })]
+          : []),
         // Value labels
         isHorizontal
           ? Plot.text(entries, {
@@ -360,12 +385,7 @@ function Heatmap({ data, hint, label }: HeatmapProps) {
           x: "x",
           y: "y",
           text: (d: { value: number }) => String(d.value),
-          fill: (d: { value: number }) => {
-            const range = hint.range ?? [1, 5];
-            const ratio = (d.value - range[0]) / (range[1] - range[0]);
-            // PiYG: low=dark pink (light text), mid=pale yellow (dark text), high=dark green (light text)
-            return ratio <= 0.25 || ratio >= 0.75 ? "#fef2f2" : "#1c1917";
-          },
+          fill: (d: { value: number }) => contrastText(d.value, hint.range ?? [1, 5]),
           fontSize: 10,
           fontWeight: "bold",
         }),

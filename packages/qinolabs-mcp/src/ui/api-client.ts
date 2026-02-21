@@ -195,6 +195,34 @@ export function getDataFile(
   return fetchJson<{ dataFiles: Array<{ filename: string; content: string }> }>(url);
 }
 
+export async function revealInExplorer(
+  opts: { graphPath?: string; nodeId?: string; file?: string },
+): Promise<{ success: true; path: string }> {
+  const res = await fetch("/api/reveal", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(opts),
+  });
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}: ${await res.text()}`);
+  }
+  return res.json() as Promise<{ success: true; path: string }>;
+}
+
+export async function openInEditor(
+  opts: { graphPath?: string; nodeId?: string; file?: string; line?: number },
+): Promise<{ success: true; path: string; editor: string }> {
+  const res = await fetch("/api/open", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(opts),
+  });
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}: ${await res.text()}`);
+  }
+  return res.json() as Promise<{ success: true; path: string; editor: string }>;
+}
+
 export async function writeJournalEntry(
   opts: { context: string; body: string; nodeId?: string },
   graphPath?: string,

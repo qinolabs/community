@@ -4,6 +4,7 @@ import { ChartNoAxesColumn, Eye, Workflow } from "lucide-react";
 
 import { Tabs, CompactTab, CompactTabsList } from "~/ui/features/_shared/compact-tabs";
 import { dottedBackgroundStyle } from "~/ui/features/_shared/dotted-background";
+import { ShellActionButtons } from "~/ui/features/_shared/shell-actions";
 import { WorkspaceGraph } from "~/ui/features/graph/workspace-graph";
 import { DataVisualizationView } from "~/ui/features/node/data-visualization-view";
 import { NodeDetailView, StatusBadge } from "~/ui/features/node/node-detail";
@@ -100,8 +101,6 @@ function NodeView() {
     }
   }
 
-  const hasMetadata = status || tags.length > 0;
-
   return (
     <div
       className="relative h-full overflow-auto"
@@ -169,24 +168,23 @@ function NodeView() {
           </Tabs>
         </div>
 
-        {/* Right side: metadata */}
-        {hasMetadata && (
-          <div className="flex items-center gap-3">
-            {tags.length > 0 && (
-              <div className="flex gap-1">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded bg-neutral-200/50 px-1.5 py-0.5 text-[9px] font-mono text-neutral-500 dark:bg-neutral-800/50 dark:text-neutral-400"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            <StatusBadge status={status} />
-          </div>
-        )}
+        {/* Right side: metadata + shell actions */}
+        <div className="flex items-center gap-3">
+          {tags.length > 0 && (
+            <div className="flex gap-1">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded bg-neutral-200/50 px-1.5 py-0.5 text-[9px] font-mono text-neutral-500 dark:bg-neutral-800/50 dark:text-neutral-400"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          {status && <StatusBadge status={status} />}
+          <ShellActionButtons graphPath={graphPath} nodeId={nodeId} />
+        </div>
       </div>
 
       {/* Content area — switches between detail view, sub-graph, and view */}

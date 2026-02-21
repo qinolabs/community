@@ -78,6 +78,19 @@ export interface WriteDataArgs {
   graphPath?: string;
 }
 
+export interface RevealArgs {
+  graphPath?: string;
+  nodeId?: string;
+  file?: string;
+}
+
+export interface OpenInEditorArgs {
+  graphPath?: string;
+  nodeId?: string;
+  file?: string;
+  line?: number;
+}
+
 /**
  * Protocol operations interface.
  *
@@ -113,6 +126,14 @@ export interface ProtocolOps {
   writeData(
     args: WriteDataArgs,
   ): Promise<{ success: true; filename: string }>;
+
+  // Shell actions
+  revealInExplorer(
+    args: RevealArgs,
+  ): Promise<{ success: true; path: string }>;
+  openInEditor(
+    args: OpenInEditorArgs,
+  ): Promise<{ success: true; path: string; editor: string }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +152,15 @@ import {
   resolveAnnotation as fsResolveAnnotation,
   readData as fsReadData,
   writeData as fsWriteData,
+  resolveTargetPath,
 } from "./protocol-reader.js";
+
+import {
+  assertWithinWorkspace,
+  resolveEditorCommand,
+  revealInExplorer as shellReveal,
+  openInEditor as shellOpen,
+} from "./shell-actions.js";
 
 /**
  * Create operations backed by direct filesystem access.
@@ -251,6 +280,24 @@ export function createDirectOps(
       const result = await fsWriteData(graphDir, args.nodeId, args.filename, args.data);
       watcher?.push({ type: "node", nodeId: args.nodeId, graphPath: args.graphPath });
       return result;
+    },
+
+    revealInExplorer: async (args) => {
+      const targetPath = await resolveTargetPath(workspaceDir, args);
+      if (!targetPath) throw new Error("Path not found");
+      assertWithinWorkspace(targetPath, workspaceDir);
+      await shellReveal(targetPath);
+      return { success: true as const, path: targetPath };
+    },
+
+    openInEditor: async (args) => {
+      const targetPath = await resolveTargetPath(workspaceDir, args);
+      if (!targetPath) throw new Error("Path not found");
+      assertWithinWorkspace(targetPath, workspaceDir);
+      const config = await fsReadConfig(workspaceDir);
+      const editor = resolveEditorCommand(config.editor);
+      await shellOpen(targetPath, editor, args.line);
+      return { success: true as const, path: targetPath, editor };
     },
   };
 }
@@ -454,6 +501,24 @@ export function createHttpOps(apiUrl: string): ProtocolOps {
         },
       );
       return handleResponse<{ success: true; filename: string }>(res);
+    },
+
+    revealInExplorer: async (args) => {
+      const res = await fetch(buildUrl("/api/reveal"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(args),
+      });
+      return handleResponse<{ success: true; path: string }>(res);
+    },
+
+    openInEditor: async (args) => {
+      const res = await fetch(buildUrl("/api/open"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(args),
+      });
+      return handleResponse<{ success: true; path: string; editor: string }>(res);
     },
   };
 }
